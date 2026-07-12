@@ -12,12 +12,12 @@ export interface CharacterModelDefinition {
 }
 
 export const CHARACTER_MODELS: CharacterModelDefinition[] = [
-  { name: 'Sloth', path: '/models/char_Sloth.glb', facingY: Math.PI },
-  { name: 'Animal', path: '/models/char_animal.glb', facingY: Math.PI },
-  { name: 'Bird', path: '/models/char_bird.glb', facingY: Math.PI },
-  { name: 'Chicken', path: '/models/char_chicken.glb', facingY: Math.PI },
-  { name: 'Deer', path: '/models/char_deer.glb', facingY: Math.PI },
-  { name: 'Kangaroo', path: '/models/char_kangaroo.glb', facingY: Math.PI },
+  { name: 'Sloth', path: '/models/char_Sloth.glb', facingY: 0 },
+  { name: 'Animal', path: '/models/char_animal.glb', facingY: 0 },
+  { name: 'Bird', path: '/models/char_bird.glb', facingY: 0 },
+  { name: 'Chicken', path: '/models/char_chicken.glb', facingY: 0 },
+  { name: 'Deer', path: '/models/char_deer.glb', facingY: 0 },
+  { name: 'Kangaroo', path: '/models/char_kangaroo.glb', facingY: 0 },
 ]
 
 const loader = new GLTFLoader()
@@ -191,7 +191,7 @@ export async function createCharacter(
     const gltf = await loadCharacterAsset(model)
     visual = cloneRenderableScene(gltf.scene)
     animations = gltf.animations
-    normalizeVisual(visual, model.facingY ?? Math.PI)
+    normalizeVisual(visual, model.facingY ?? 0)
   } catch (error) {
     console.error(`Failed to load ${model.name}:`, error)
     visual = createFallbackVisual(accent)
