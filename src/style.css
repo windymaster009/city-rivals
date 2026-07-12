@@ -130,6 +130,23 @@ button { font: inherit; }
   letter-spacing: 0.08em;
 }
 
+.health-track {
+  width: 100%;
+  height: 5px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.health-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ef4444, #22c55e);
+  transition: width 260ms ease;
+}
+
 .stats {
   display: flex;
   gap: 10px;
@@ -137,6 +154,16 @@ button { font: inherit; }
   color: #cbd5e1;
   font-size: 11px;
   white-space: nowrap;
+}
+
+.player-card.dead {
+  opacity: 0.42;
+  filter: grayscale(0.9);
+}
+
+.name-line .dead-tag {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
 }
 
 .event-panel {
@@ -187,17 +214,31 @@ button { font: inherit; }
 }
 
 .dice-card {
-  width: 70px;
-  height: 58px;
+  width: 132px;
+  height: 68px;
   display: grid;
   place-items: center;
   align-content: center;
+  gap: 2px;
   border-radius: 13px;
   background: rgba(255, 255, 255, 0.055);
 }
 
 .dice-caption { color: #64748b; font-size: 8px; font-weight: 800; letter-spacing: 0.15em; }
-.dice-card strong { margin-top: 2px; font-size: 24px; line-height: 1; }
+.dice-faces { display: flex; align-items: center; gap: 7px; line-height: 1; }
+.dice-faces strong {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #111827;
+  font-size: 18px;
+}
+.dice-faces span { color: #64748b; font-weight: 800; }
+.dice-card small { color: #94a3b8; font-size: 9px; }
+.dice-card small b { color: #fbbf24; font-size: 11px; }
 
 .roll-button,
 .secondary-button {
