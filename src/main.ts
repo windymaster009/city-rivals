@@ -1,7 +1,12 @@
 import './style.css'
 import * as THREE from 'three'
 import { createBoard, type BoardTile } from './game/board'
-import { animateCharacterIdle, animateJumpPose, createCharacter } from './game/Character'
+import {
+  animateCharacterIdle,
+  animateJumpPose,
+  createCharacter,
+  pickUniqueCharacterModels,
+} from './game/Character'
 import { CameraController } from './game/CameraController'
 import type { PlayerState } from './game/types'
 
@@ -415,29 +420,35 @@ function renderPlayerNameFields(): void {
   }
 }
 
-function startNewGame(names: string[], startingMoney: number): void {
+async function startNewGame(names: string[], startingMoney: number): Promise<void> {
   players.forEach(disposePlayerModel)
+  players = []
 
-  players = names.map((name, seatIndex) => {
-    const accent = PLAYER_COLORS[seatIndex]
-    const model = createCharacter(accent)
-    model.scale.setScalar(0.7)
+  const characterAssignments = pickUniqueCharacterModels(names.length)
 
-    return {
-      id: `player-${seatIndex + 1}`,
-      seatIndex,
-      name,
-      hearts: 5,
-      maxHearts: 5,
-      money: startingMoney,
-      inventory: [],
-      tileIndex: 0,
-      laps: 0,
-      accent,
-      model,
-      eliminated: false,
-    }
-  })
+  players = await Promise.all(
+    names.map(async (name, seatIndex) => {
+      const accent = PLAYER_COLORS[seatIndex]
+      const character = characterAssignments[seatIndex]
+      const model = await createCharacter(accent, character)
+      model.scale.setScalar(0.7)
+
+      return {
+        id: `player-${seatIndex + 1}`,
+        seatIndex,
+        name,
+        hearts: 5,
+        maxHearts: 5,
+        money: startingMoney,
+        inventory: [],
+        tileIndex: 0,
+        laps: 0,
+        accent,
+        model,
+        eliminated: false,
+      }
+    }),
+  )
 
   players.forEach((player) => {
     positionPlayerOnTile(player, tiles[0])
@@ -456,6 +467,10 @@ function startNewGame(names: string[], startingMoney: number): void {
 
   addLog(`🇰🇭 Match started with ${players.length} players`)
   addLog(`❤️ Everyone begins with 5 hearts and ${formatMoney(startingMoney)}`)
+  players.forEach((player) => {
+    const characterName = String(player.model.userData.characterName ?? 'Character')
+    addLog(`🧍 ${player.name} received ${characterName}`)
+  })
   addLog('🧩 All 63 special tiles are placeholders for now')
   startTurn()
 }
@@ -471,16 +486,33 @@ function showSetup(): void {
   updatePrivateInventory()
 }
 
-setupForm.addEventListener('submit', (event) => {
+setupForm.addEventListener('submit', async (event) => {
   event.preventDefault()
 
+  const submitButton = setupForm.querySelector<HTMLButtonElement>('button[type="submit"]')
   const names = Array.from(
     playerNameFields.querySelectorAll<HTMLInputElement>('.player-name-input'),
   ).map((input, index) => input.value.trim() || DEFAULT_NAMES[index])
 
   const startingMoney = Math.max(0, Math.floor(Number(startingMoneyInput.value) || 1000))
   startingMoneyInput.value = String(startingMoney)
-  startNewGame(names, startingMoney)
+
+  try {
+    if (submitButton) {
+      submitButton.disabled = true
+      submitButton.textContent = 'Loading random characters…'
+    }
+
+    await startNewGame(names, startingMoney)
+  } catch (error) {
+    console.error('Failed to start match:', error)
+    window.alert('The match could not start. Check the browser console for details.')
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false
+      submitButton.textContent = 'Start Match'
+    }
+  }
 })
 
 playerCountSelect.addEventListener('change', renderPlayerNameFields)
