@@ -1,15 +1,24 @@
 import type * as THREE from 'three'
 
-export type PlayerId = 'windy' | 'rival'
+export interface InventoryItem {
+  id: string
+  name: string
+  quantity: number
+}
 
 export interface PlayerState {
-  id: PlayerId
+  id: string
+  seatIndex: number
   name: string
-  health: number
+  hearts: number
+  maxHearts: number
+  money: number
+  inventory: InventoryItem[]
   tileIndex: number
   laps: number
   accent: number
   model: THREE.Group
+  eliminated: boolean
 }
 
 export type CameraMode = 'board' | 'focus' | 'follow'
