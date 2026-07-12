@@ -6,11 +6,11 @@ export class CameraController {
   private mode: CameraMode = 'board'
   private focusTarget = new THREE.Vector3()
   private followTarget?: THREE.Object3D
-  private boardPosition = new THREE.Vector3(16, 18, 18)
+  private boardPosition = new THREE.Vector3(0, 22, 23.5)
   private desiredPosition = new THREE.Vector3()
   private desiredLookAt = new THREE.Vector3()
   private currentLookAt = new THREE.Vector3()
-  private lastMoveDirection = new THREE.Vector3(0, 0, -1)
+  private lastMoveDirection = new THREE.Vector3(-1, 0, 0)
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera
@@ -50,19 +50,19 @@ export class CameraController {
 
     if (this.mode === 'board') {
       this.desiredPosition.copy(this.boardPosition)
-      this.desiredLookAt.set(0, 0.4, 0)
+      this.desiredLookAt.set(0, 0.25, 0)
     } else if (this.mode === 'focus') {
-      this.desiredPosition.copy(this.focusTarget).add(new THREE.Vector3(5.5, 7.2, 6.5))
-      this.desiredLookAt.copy(this.focusTarget).add(new THREE.Vector3(0, 0.8, 0))
+      this.desiredPosition.copy(this.focusTarget).add(new THREE.Vector3(4.6, 6.5, 5.7))
+      this.desiredLookAt.copy(this.focusTarget).add(new THREE.Vector3(0, 0.75, 0))
     } else if (this.followTarget) {
       const horizontalTarget = this.followTarget.position.clone()
       horizontalTarget.y = 0
 
-      const behind = this.lastMoveDirection.clone().multiplyScalar(-6.2)
-      const side = new THREE.Vector3(-this.lastMoveDirection.z, 0, this.lastMoveDirection.x).multiplyScalar(1.4)
+      const behind = this.lastMoveDirection.clone().multiplyScalar(-5.3)
+      const side = new THREE.Vector3(-this.lastMoveDirection.z, 0, this.lastMoveDirection.x).multiplyScalar(1.15)
       this.desiredPosition.copy(horizontalTarget).add(behind).add(side)
-      this.desiredPosition.y = 6.2
-      this.desiredLookAt.copy(horizontalTarget).add(new THREE.Vector3(0, 1.05, 0))
+      this.desiredPosition.y = 5.7
+      this.desiredLookAt.copy(horizontalTarget).add(new THREE.Vector3(0, 0.9, 0))
     }
 
     this.camera.position.lerp(this.desiredPosition, smooth)
