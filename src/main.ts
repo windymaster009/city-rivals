@@ -1,6 +1,6 @@
 import './style.css'
 import * as THREE from 'three'
-import { createBoard, START_POSITION, type BoardTile } from './game/board'
+import { createBoard, setBoardTileGlow, type BoardTile } from './game/board'
 import {
   animateCharacterIdle,
   animateJumpPose,
@@ -87,7 +87,7 @@ ground.position.y = -0.86
 ground.receiveShadow = true
 scene.add(ground)
 
-const tiles = createBoard(scene)
+const { tiles, startTile } = createBoard(scene)
 const cameraController = new CameraController(camera)
 
 let players: PlayerState[] = []
@@ -138,8 +138,31 @@ function playerOffset(player: PlayerState): THREE.Vector3 {
 }
 
 function positionPlayerAtStart(player: PlayerState): void {
-  const position = START_POSITION.clone().add(playerOffset(player))
+  const position = startTile.position.clone().add(playerOffset(player))
   player.model.position.copy(position)
+}
+
+function updateBoardTileGlows(elapsed: number): void {
+  const boardTargets = [startTile, ...tiles]
+  const active = gameStarted && !gameOver ? players[activePlayerIndex] : undefined
+  const pulse = active ? (Math.sin(elapsed * 4.2) + 1) * 0.5 : 0
+
+  for (const tile of boardTargets) {
+    const occupants = gameStarted
+      ? players.filter((player) => !player.eliminated && player.tileIndex === tile.index)
+      : []
+
+    const activeOccupant = active && !active.eliminated && active.tileIndex === tile.index
+      ? active
+      : undefined
+
+    setBoardTileGlow(
+      tile,
+      occupants.map((player) => player.accent),
+      activeOccupant?.accent,
+      activeOccupant ? pulse : 0,
+    )
+  }
 }
 
 function disposePlayerModel(player: PlayerState): void {
@@ -559,6 +582,7 @@ function render(): void {
     }
   })
 
+  updateBoardTileGlows(elapsed)
   cameraController.update(delta)
   renderer.render(scene, camera)
   requestAnimationFrame(render)
