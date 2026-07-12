@@ -24,8 +24,9 @@ const loader = new GLTFLoader()
 const assetCache = new Map<string, Promise<GLTF>>()
 const LOAD_TIMEOUT_MS = 15_000
 const TARGET_CHARACTER_HEIGHT = 2.05
+const BOARD_GLOW_WORLD_Y = 0.315
 
-let glowTexture: THREE.CanvasTexture | undefined
+let tileGlowTexture: THREE.CanvasTexture | undefined
 
 function shuffle<T>(items: readonly T[]): T[] {
   const result = [...items]
@@ -82,29 +83,46 @@ function loadCharacterAsset(model: CharacterModelDefinition): Promise<GLTF> {
   return pending
 }
 
-function getGlowTexture(): THREE.CanvasTexture {
-  if (glowTexture) return glowTexture
+function getTileGlowTexture(): THREE.CanvasTexture {
+  if (tileGlowTexture) return tileGlowTexture
 
   const canvas = document.createElement('canvas')
-  canvas.width = 256
-  canvas.height = 256
+  canvas.width = 512
+  canvas.height = 512
 
   const context = canvas.getContext('2d')
   if (!context) throw new Error('Canvas 2D context is unavailable')
 
-  const gradient = context.createRadialGradient(128, 128, 4, 128, 128, 124)
-  gradient.addColorStop(0, 'rgba(255,255,255,0.95)')
-  gradient.addColorStop(0.22, 'rgba(255,255,255,0.62)')
-  gradient.addColorStop(0.55, 'rgba(255,255,255,0.20)')
-  gradient.addColorStop(1, 'rgba(255,255,255,0)')
+  context.clearRect(0, 0, canvas.width, canvas.height)
 
-  context.fillStyle = gradient
-  context.fillRect(0, 0, canvas.width, canvas.height)
+  // Soft fill across the whole tile.
+  context.fillStyle = 'rgba(255,255,255,0.17)'
+  context.roundRect(46, 46, 420, 420, 46)
+  context.fill()
 
-  glowTexture = new THREE.CanvasTexture(canvas)
-  glowTexture.colorSpace = THREE.SRGBColorSpace
-  glowTexture.needsUpdate = true
-  return glowTexture
+  // Several borders create a broad neon bloom instead of a small circle.
+  for (let layer = 0; layer < 8; layer += 1) {
+    const inset = 28 + (layer * 6)
+    const alpha = 0.12 + ((7 - layer) * 0.08)
+    context.strokeStyle = `rgba(255,255,255,${alpha})`
+    context.lineWidth = 22 - (layer * 2)
+    context.beginPath()
+    context.roundRect(inset, inset, 512 - (inset * 2), 512 - (inset * 2), 54 - layer)
+    context.stroke()
+  }
+
+  context.shadowColor = 'rgba(255,255,255,0.95)'
+  context.shadowBlur = 34
+  context.strokeStyle = 'rgba(255,255,255,0.88)'
+  context.lineWidth = 8
+  context.beginPath()
+  context.roundRect(54, 54, 404, 404, 44)
+  context.stroke()
+
+  tileGlowTexture = new THREE.CanvasTexture(canvas)
+  tileGlowTexture.colorSpace = THREE.SRGBColorSpace
+  tileGlowTexture.needsUpdate = true
+  return tileGlowTexture
 }
 
 function createShadow(): THREE.Mesh {
@@ -124,54 +142,36 @@ function createShadow(): THREE.Mesh {
   return shadow
 }
 
-function createPlayerGlow(accent: number): {
-  aura: THREE.Mesh
-  auraMaterial: THREE.MeshBasicMaterial
-  ring: THREE.Mesh
-  ringMaterial: THREE.MeshBasicMaterial
+function createBoardGlow(accent: number): {
+  glow: THREE.Mesh
+  glowMaterial: THREE.MeshBasicMaterial
   light: THREE.PointLight
 } {
-  const auraMaterial = new THREE.MeshBasicMaterial({
-    map: getGlowTexture(),
+  const glowMaterial = new THREE.MeshBasicMaterial({
+    map: getTileGlowTexture(),
     color: accent,
     transparent: true,
-    opacity: 0.3,
+    opacity: 0.28,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
+    depthTest: true,
     toneMapped: false,
     side: THREE.DoubleSide,
   })
 
-  const aura = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.45, 2.45),
-    auraMaterial,
+  // Main.ts scales every character root to 0.7. This becomes approximately
+  // one full board tile after that scale is applied.
+  const glow = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.34, 2.34),
+    glowMaterial,
   )
-  aura.rotation.x = -Math.PI / 2
-  aura.position.y = 0.035
-  aura.renderOrder = 3
+  glow.rotation.x = -Math.PI / 2
+  glow.renderOrder = 8
 
-  const ringMaterial = new THREE.MeshBasicMaterial({
-    color: accent,
-    transparent: true,
-    opacity: 0.48,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    toneMapped: false,
-    side: THREE.DoubleSide,
-  })
+  // The light belongs to the board glow, not to a tiny character aura.
+  const light = new THREE.PointLight(accent, 7, 5.2, 2)
 
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(0.57, 0.7, 48),
-    ringMaterial,
-  )
-  ring.rotation.x = -Math.PI / 2
-  ring.position.y = 0.045
-  ring.renderOrder = 4
-
-  const light = new THREE.PointLight(accent, 5, 4.2, 2)
-  light.position.set(0, 0.42, 0)
-
-  return { aura, auraMaterial, ring, ringMaterial, light }
+  return { glow, glowMaterial, light }
 }
 
 function cloneRenderableScene(source: THREE.Group): THREE.Group {
@@ -191,10 +191,7 @@ function cloneRenderableScene(source: THREE.Group): THREE.Group {
   return visual
 }
 
-function normalizeVisual(
-  visual: THREE.Group,
-  facingY: number,
-): void {
+function normalizeVisual(visual: THREE.Group, facingY: number): void {
   visual.rotation.y = facingY
   visual.updateMatrixWorld(true)
 
@@ -254,37 +251,36 @@ function createFallbackVisual(accent: number): THREE.Group {
   return visual
 }
 
-function updateGlowState(
+function updateBoardGlow(
   character: THREE.Group,
   strength: number,
   pulse: number,
 ): void {
-  const aura = character.userData.aura as THREE.Mesh | undefined
-  const auraMaterial = character.userData.auraMaterial as THREE.MeshBasicMaterial | undefined
-  const ring = character.userData.glowRing as THREE.Mesh | undefined
-  const ringMaterial = character.userData.ringMaterial as THREE.MeshBasicMaterial | undefined
-  const light = character.userData.playerLight as THREE.PointLight | undefined
+  const glow = character.userData.boardGlow as THREE.Mesh | undefined
+  const glowMaterial = character.userData.boardGlowMaterial as THREE.MeshBasicMaterial | undefined
+  const light = character.userData.boardGlowLight as THREE.PointLight | undefined
   const shadow = character.userData.shadow as THREE.Mesh | undefined
 
-  if (!aura || !auraMaterial || !ring || !ringMaterial || !light) return
+  if (!glow || !glowMaterial || !light) return
 
-  // Keep the board effects on the floor even while the character jumps.
+  // Keep the square glow on the board surface while the model jumps above it.
   const parentScaleY = Math.max(Math.abs(character.scale.y), 0.0001)
-  const floorY = (0.035 - character.position.y) / parentScaleY
-  aura.position.y = floorY
-  ring.position.y = floorY + (0.01 / parentScaleY)
-  light.position.y = (0.42 - character.position.y) / parentScaleY
-  if (shadow) shadow.position.y = floorY - (0.012 / parentScaleY)
+  const floorY = (BOARD_GLOW_WORLD_Y - character.position.y) / parentScaleY
+  glow.position.y = floorY
+  light.position.y = (0.72 - character.position.y) / parentScaleY
+
+  if (shadow) {
+    shadow.position.y = (0.305 - character.position.y) / parentScaleY
+  }
 
   const safeStrength = THREE.MathUtils.clamp(strength, 0, 1)
   const safePulse = THREE.MathUtils.clamp(pulse, 0, 1)
 
-  auraMaterial.opacity = 0.18 + (safeStrength * 0.34) + (safePulse * 0.08)
-  ringMaterial.opacity = 0.26 + (safeStrength * 0.58) + (safePulse * 0.12)
-  light.intensity = 3.2 + (safeStrength * 8.5) + (safePulse * 1.8)
+  glowMaterial.opacity = 0.16 + (safeStrength * 0.34) + (safePulse * 0.1)
+  light.intensity = 3.5 + (safeStrength * 11) + (safePulse * 3)
 
-  aura.scale.setScalar(0.88 + (safeStrength * 0.18) + (safePulse * 0.06))
-  ring.scale.setScalar(0.94 + (safeStrength * 0.1) + (safePulse * 0.05))
+  const scale = 0.98 + (safeStrength * 0.04) + (safePulse * 0.035)
+  glow.scale.setScalar(scale)
 }
 
 export async function createCharacter(
@@ -293,10 +289,9 @@ export async function createCharacter(
 ): Promise<THREE.Group> {
   const root = new THREE.Group()
   const shadow = createShadow()
-  const { aura, auraMaterial, ring, ringMaterial, light } = createPlayerGlow(accent)
+  const { glow, glowMaterial, light } = createBoardGlow(accent)
 
-  root.add(aura)
-  root.add(ring)
+  root.add(glow)
   root.add(shadow)
   root.add(light)
 
@@ -317,11 +312,9 @@ export async function createCharacter(
   root.add(visual)
   root.userData.visual = visual
   root.userData.shadow = shadow
-  root.userData.aura = aura
-  root.userData.auraMaterial = auraMaterial
-  root.userData.glowRing = ring
-  root.userData.ringMaterial = ringMaterial
-  root.userData.playerLight = light
+  root.userData.boardGlow = glow
+  root.userData.boardGlowMaterial = glowMaterial
+  root.userData.boardGlowLight = light
   root.userData.baseVisualY = visual.position.y
   root.userData.characterName = model.name
   root.userData.characterPath = model.path
@@ -337,7 +330,7 @@ export async function createCharacter(
     root.userData.lastAnimationTime = undefined
   }
 
-  updateGlowState(root, 0.25, 0)
+  updateBoardGlow(root, 0.3, 0)
   return root
 }
 
@@ -367,7 +360,7 @@ export function animateCharacterIdle(
   }
 
   const pulse = active ? (Math.sin(time * 4.2) + 1) * 0.5 : 0
-  updateGlowState(character, active ? 1 : 0.25, pulse)
+  updateBoardGlow(character, active ? 1 : 0.3, pulse)
 }
 
 export function animateJumpPose(
@@ -381,8 +374,8 @@ export function animateJumpPose(
   visual.rotation.x = -0.12 * lift
   visual.rotation.z = 0.08 * lift
 
-  // Bright moving glow follows the character across the board.
-  updateGlowState(character, 1, lift)
+  // The full tile-sized glow travels across the board with the player.
+  updateBoardGlow(character, 1, lift)
 
   if (progress >= 1) {
     visual.rotation.x = 0
