@@ -16,7 +16,7 @@
           <span class="brand-mark">CR</span>
           <div>
             <strong>City Rivals</strong>
-            <small>Cambodian classic prototype</small>
+            <small>Cambodian classic survival board</small>
           </div>
         </div>
         <div id="player-status" class="player-status"></div>
@@ -24,8 +24,15 @@
 
       <aside class="event-panel">
         <div class="panel-title">LIVE MATCH</div>
-        <div id="turn-label" class="turn-label">Windy's turn</div>
+        <div id="turn-label" class="turn-label">Set up a match</div>
         <div id="event-log" class="event-log" aria-live="polite"></div>
+      </aside>
+
+      <aside class="inventory-panel">
+        <div class="panel-title">PRIVATE INVENTORY</div>
+        <div id="inventory-owner" class="inventory-owner">Waiting for a match</div>
+        <div id="inventory-items" class="inventory-items"></div>
+        <small class="privacy-note">Hot-seat preview: only the active player’s items are shown.</small>
       </aside>
 
       <section class="controls">
@@ -38,16 +45,57 @@
           </div>
           <small>Total <b id="dice-total">–</b></small>
         </div>
-        <button id="roll-button" class="roll-button" type="button">
+        <button id="roll-button" class="roll-button" type="button" disabled>
           <span>🎲</span>
           Roll 2 Dice
         </button>
         <button id="camera-button" class="secondary-button" type="button">
           Board View
         </button>
+        <button id="new-match-button" class="secondary-button" type="button">
+          New Match
+        </button>
       </section>
 
-      <div id="loading" class="loading">Preparing the board…</div>
+      <div id="setup-screen" class="setup-screen">
+        <form id="setup-form" class="setup-card">
+          <div class="setup-kicker">CAMBODIAN CLASSIC — FOUNDATION</div>
+          <h1>Start a survival match</h1>
+          <p>
+            The 63-tile board is ready. Special items, dangers, and rewards will be added row by row.
+          </p>
+
+          <div class="setup-options">
+            <label>
+              <span>Players</span>
+              <select id="player-count">
+                <option value="2" selected>2 players</option>
+                <option value="3">3 players</option>
+                <option value="4">4 players</option>
+                <option value="5">5 players</option>
+                <option value="6">6 players</option>
+              </select>
+            </label>
+            <label>
+              <span>Starting money</span>
+              <input id="starting-money" type="number" min="0" step="100" value="1000" />
+            </label>
+          </div>
+
+          <div id="player-name-fields" class="player-name-fields"></div>
+
+          <div class="setup-rules">
+            <span>❤️ 5 hearts</span>
+            <span>🎲 Two dice</span>
+            <span>🧍 2–6 players</span>
+            <span>🔁 Repeating path</span>
+          </div>
+
+          <button class="start-button" type="submit">Start Match</button>
+        </form>
+      </div>
+
+      <div id="loading" class="loading">Preparing the 63-tile board…</div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
