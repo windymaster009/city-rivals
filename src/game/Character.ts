@@ -1,92 +1,134 @@
 import * as THREE from 'three'
+import {
+  GLTFLoader,
+  type GLTF,
+} from 'three/addons/loaders/GLTFLoader.js'
+import { clone } from 'three/addons/utils/SkeletonUtils.js'
 
-export function createCharacter(accent: number): THREE.Group {
+const loader = new GLTFLoader()
+
+let characterAssetPromise: Promise<GLTF> | null = null
+
+function loadCharacterAsset(): Promise<GLTF> {
+  if (!characterAssetPromise) {
+    characterAssetPromise = loader.loadAsync('/models/char_Sloth.glb')
+  }
+
+  return characterAssetPromise
+}
+
+export async function createCharacter(
+  _accent: number,
+): Promise<THREE.Group> {
   const root = new THREE.Group()
-
-  const bodyMaterial = new THREE.MeshStandardMaterial({
-    color: accent,
-    roughness: 0.45,
-    metalness: 0.1,
-  })
-  const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.65 })
-  const skinMaterial = new THREE.MeshStandardMaterial({ color: 0xf2c6a0, roughness: 0.75 })
 
   const shadow = new THREE.Mesh(
     new THREE.CircleGeometry(0.48, 32),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.24, depthWrite: false }),
+    new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.28,
+      depthWrite: false,
+    }),
   )
+
   shadow.rotation.x = -Math.PI / 2
   shadow.position.y = 0.02
   root.add(shadow)
 
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.72, 7, 14), bodyMaterial)
-  body.position.y = 1.08
-  body.castShadow = true
-  root.add(body)
+  const gltf = await loadCharacterAsset()
 
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 24, 18), skinMaterial)
-  head.position.y = 1.83
-  head.castShadow = true
-  root.add(head)
+  // Important for animated/skinned GLB characters
+  const visual = clone(gltf.scene)
 
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.35, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), darkMaterial)
-  hair.position.y = 1.95
-  hair.castShadow = true
-  root.add(hair)
+  // Change this if the model is too large or too small
+  visual.scale.setScalar(0.55)
 
-  const armGeometry = new THREE.CapsuleGeometry(0.095, 0.47, 5, 10)
-  const leftArm = new THREE.Mesh(armGeometry, bodyMaterial)
-  leftArm.position.set(-0.43, 1.15, 0)
-  leftArm.rotation.z = 0.14
-  leftArm.castShadow = true
-  root.add(leftArm)
+  // Change to 0 if the character faces backward
+  visual.rotation.y = Math.PI
 
-  const rightArm = leftArm.clone()
-  rightArm.position.x = 0.43
-  rightArm.rotation.z = -0.14
-  root.add(rightArm)
+  visual.position.y = 0
 
-  const legGeometry = new THREE.CapsuleGeometry(0.11, 0.38, 5, 10)
-  const leftLeg = new THREE.Mesh(legGeometry, darkMaterial)
-  leftLeg.position.set(-0.18, 0.43, 0)
-  leftLeg.castShadow = true
-  root.add(leftLeg)
+  visual.traverse((object) => {
+    if (object instanceof THREE.Mesh) {
+      object.castShadow = true
+      object.receiveShadow = true
+    }
+  })
 
-  const rightLeg = leftLeg.clone()
-  rightLeg.position.x = 0.18
-  root.add(rightLeg)
+  root.add(visual)
 
-  root.userData.body = body
-  root.userData.leftArm = leftArm
-  root.userData.rightArm = rightArm
-  root.userData.leftLeg = leftLeg
-  root.userData.rightLeg = rightLeg
+  root.userData.visual = visual
   root.userData.shadow = shadow
+  root.userData.baseVisualY = visual.position.y
+
+  if (gltf.animations.length > 0) {
+    const mixer = new THREE.AnimationMixer(visual)
+
+    const idleClip =
+      gltf.animations.find((clip) =>
+        clip.name.toLowerCase().includes('idle'),
+      ) ?? gltf.animations[0]
+
+    mixer.clipAction(idleClip).play()
+
+    root.userData.mixer = mixer
+    root.userData.lastAnimationTime = undefined
+  }
 
   return root
 }
 
-export function animateCharacterIdle(character: THREE.Group, time: number, active: boolean): void {
-  const body = character.userData.body as THREE.Mesh
-  const leftArm = character.userData.leftArm as THREE.Mesh
-  const rightArm = character.userData.rightArm as THREE.Mesh
+export function animateCharacterIdle(
+  character: THREE.Group,
+  time: number,
+  active: boolean,
+): void {
+  const visual = character.userData.visual as THREE.Group | undefined
 
-  const speed = active ? 3.3 : 2
-  const amount = active ? 0.045 : 0.022
-  body.position.y = 1.08 + Math.sin(time * speed) * amount
-  leftArm.rotation.x = Math.sin(time * speed) * 0.08
-  rightArm.rotation.x = -Math.sin(time * speed) * 0.08
+  const mixer = character.userData.mixer as
+    | THREE.AnimationMixer
+    | undefined
+
+  const previousTime = character.userData.lastAnimationTime as
+    | number
+    | undefined
+
+  if (mixer) {
+    const delta =
+      previousTime === undefined
+        ? 0
+        : Math.min(Math.max(time - previousTime, 0), 0.05)
+
+    mixer.update(delta)
+    character.userData.lastAnimationTime = time
+  }
+
+  if (!visual) return
+
+  const baseY = Number(character.userData.baseVisualY ?? 0)
+  const speed = active ? 3.2 : 2
+  const amount = active ? 0.035 : 0.018
+
+  visual.position.y =
+    baseY + Math.sin(time * speed) * amount
 }
 
-export function animateJumpPose(character: THREE.Group, progress: number): void {
-  const leftArm = character.userData.leftArm as THREE.Mesh
-  const rightArm = character.userData.rightArm as THREE.Mesh
-  const leftLeg = character.userData.leftLeg as THREE.Mesh
-  const rightLeg = character.userData.rightLeg as THREE.Mesh
+export function animateJumpPose(
+  character: THREE.Group,
+  progress: number,
+): void {
+  const visual = character.userData.visual as THREE.Group | undefined
+
+  if (!visual) return
+
   const lift = Math.sin(progress * Math.PI)
 
-  leftArm.rotation.x = -0.7 * lift
-  rightArm.rotation.x = -0.7 * lift
-  leftLeg.rotation.x = 0.45 * lift
-  rightLeg.rotation.x = -0.45 * lift
+  visual.rotation.x = -0.12 * lift
+  visual.rotation.z = 0.08 * lift
+
+  if (progress >= 1) {
+    visual.rotation.x = 0
+    visual.rotation.z = 0
+  }
 }
