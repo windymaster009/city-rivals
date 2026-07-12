@@ -68,8 +68,8 @@ function makeTileLabel(tileNumber: number, isStart: boolean): THREE.CanvasTextur
 /**
  * Build the 7 x 9 Cambodian board as one continuous snake path.
  *
- * Movement starts at the top-right cell. The first row moves right-to-left,
- * the second row moves left-to-right, and the direction alternates until the
+ * Movement starts at the top-left cell. The first row moves left-to-right,
+ * the second row moves right-to-left, and the direction alternates until the
  * final cell. After tile 63, movement loops back to tile 1.
  */
 function buildSnakePath(): PathCell[] {
@@ -79,8 +79,8 @@ function buildSnakePath(): PathCell[] {
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
     const columns = row % 2 === 0
-      ? Array.from({ length: BOARD_COLUMNS }, (_, index) => BOARD_COLUMNS - 1 - index)
-      : Array.from({ length: BOARD_COLUMNS }, (_, index) => index)
+      ? Array.from({ length: BOARD_COLUMNS }, (_, index) => index)
+      : Array.from({ length: BOARD_COLUMNS }, (_, index) => BOARD_COLUMNS - 1 - index)
 
     for (const column of columns) {
       const x = (column - halfColumns) * TILE_SPACING
