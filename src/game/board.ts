@@ -3,7 +3,7 @@ import * as THREE from 'three'
 export interface BoardTile {
   index: number
   name: string
-  kind: 'start' | 'property' | 'event' | 'tax' | 'bank' | 'jail'
+  kind: 'start' | 'path'
   position: THREE.Vector3
   mesh: THREE.Group
 }
@@ -11,20 +11,11 @@ export interface BoardTile {
 const TILE_SIZE = 2.35
 const BOARD_WIDTH = 7
 const BOARD_HEIGHT = 7
+const TILE_COUNT = (BOARD_WIDTH * 2) + (BOARD_HEIGHT * 2) - 4
 
-const TILE_NAMES = [
-  'START', 'Pixel Café', 'Chance', 'Solar Street', 'City Tax', 'Neon Mall', 'Bank',
-  'JAIL', 'Cloud Plaza', 'Chance', 'Metro Hub', 'Code Avenue', 'Power Plant',
-  'Free Park', 'Arcade Road', 'Chance', 'River Market', 'Tower Square', 'Luxury Tax',
-  'Airport', 'Festival', 'Chance', 'Tech District', 'Royal Hotel',
-]
-
-const TILE_KINDS: BoardTile['kind'][] = [
-  'start', 'property', 'event', 'property', 'tax', 'property', 'bank',
-  'jail', 'property', 'event', 'property', 'property', 'property',
-  'event', 'property', 'event', 'property', 'property', 'tax',
-  'property', 'event', 'event', 'property', 'property',
-]
+const TILE_NAMES = Array.from({ length: TILE_COUNT }, (_, index) => (
+  index === 0 ? 'START' : `STEP ${index}`
+))
 
 function makeTileLabel(text: string): THREE.CanvasTexture {
   const canvas = document.createElement('canvas')
@@ -34,25 +25,20 @@ function makeTileLabel(text: string): THREE.CanvasTexture {
   if (!ctx) throw new Error('Canvas 2D context is unavailable')
 
   ctx.clearRect(0, 0, canvas.width, canvas.height)
-  ctx.fillStyle = 'rgba(5, 9, 22, 0.88)'
+  ctx.fillStyle = 'rgba(5, 9, 22, 0.9)'
   ctx.roundRect(8, 8, 496, 176, 28)
   ctx.fill()
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)'
-  ctx.lineWidth = 5
+  ctx.strokeStyle = text === 'START' ? 'rgba(74, 222, 128, 0.9)' : 'rgba(255,255,255,0.18)'
+  ctx.lineWidth = text === 'START' ? 9 : 5
   ctx.stroke()
 
-  ctx.fillStyle = '#ffffff'
-  ctx.font = '700 46px Inter, Arial, sans-serif'
+  ctx.fillStyle = text === 'START' ? '#86efac' : '#ffffff'
+  ctx.font = text === 'START'
+    ? '800 52px Inter, Arial, sans-serif'
+    : '700 44px Inter, Arial, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-
-  const words = text.split(' ')
-  if (words.length > 1) {
-    ctx.fillText(words.slice(0, -1).join(' '), 256, 72)
-    ctx.fillText(words.at(-1) ?? '', 256, 126)
-  } else {
-    ctx.fillText(text, 256, 96)
-  }
+  ctx.fillText(text, 256, 96)
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
@@ -60,26 +46,35 @@ function makeTileLabel(text: string): THREE.CanvasTexture {
   return texture
 }
 
-function tileColor(kind: BoardTile['kind']): number {
-  switch (kind) {
-    case 'start': return 0x22c55e
-    case 'event': return 0xa855f7
-    case 'tax': return 0xef4444
-    case 'bank': return 0x3b82f6
-    case 'jail': return 0xf97316
-    default: return 0x1f2937
-  }
-}
-
+/**
+ * The old Cambodian board starts at the top-right corner.
+ * Indexes then move clockwise: down the right side, across the bottom,
+ * up the left side, and back across the top to repeat the loop.
+ */
 function buildPathPositions(): THREE.Vector3[] {
   const positions: THREE.Vector3[] = []
   const halfW = (BOARD_WIDTH - 1) / 2
   const halfH = (BOARD_HEIGHT - 1) / 2
 
-  for (let x = -halfW; x <= halfW; x += 1) positions.push(new THREE.Vector3(x * TILE_SIZE, 0, halfH * TILE_SIZE))
-  for (let z = halfH - 1; z >= -halfH; z -= 1) positions.push(new THREE.Vector3(halfW * TILE_SIZE, 0, z * TILE_SIZE))
-  for (let x = halfW - 1; x >= -halfW; x -= 1) positions.push(new THREE.Vector3(x * TILE_SIZE, 0, -halfH * TILE_SIZE))
-  for (let z = -halfH + 1; z < halfH; z += 1) positions.push(new THREE.Vector3(-halfW * TILE_SIZE, 0, z * TILE_SIZE))
+  // Top-right START, then move down the right edge.
+  for (let z = halfH; z >= -halfH; z -= 1) {
+    positions.push(new THREE.Vector3(halfW * TILE_SIZE, 0, z * TILE_SIZE))
+  }
+
+  // Bottom edge, moving right to left (the corner is already included).
+  for (let x = halfW - 1; x >= -halfW; x -= 1) {
+    positions.push(new THREE.Vector3(x * TILE_SIZE, 0, -halfH * TILE_SIZE))
+  }
+
+  // Left edge, moving bottom to top.
+  for (let z = -halfH + 1; z <= halfH; z += 1) {
+    positions.push(new THREE.Vector3(-halfW * TILE_SIZE, 0, z * TILE_SIZE))
+  }
+
+  // Top edge, moving left to right, stopping before START.
+  for (let x = -halfW + 1; x < halfW; x += 1) {
+    positions.push(new THREE.Vector3(x * TILE_SIZE, 0, halfH * TILE_SIZE))
+  }
 
   return positions
 }
@@ -107,15 +102,17 @@ export function createBoard(scene: THREE.Scene): BoardTile[] {
 
   const positions = buildPathPositions()
   const tiles: BoardTile[] = positions.map((position, index) => {
-    const kind = TILE_KINDS[index]
+    const kind: BoardTile['kind'] = index === 0 ? 'start' : 'path'
     const group = new THREE.Group()
 
     const base = new THREE.Mesh(
       new THREE.BoxGeometry(2.15, 0.35, 2.15),
       new THREE.MeshStandardMaterial({
-        color: tileColor(kind),
+        color: kind === 'start' ? 0x166534 : 0x1f2937,
+        emissive: kind === 'start' ? 0x052e16 : 0x000000,
+        emissiveIntensity: kind === 'start' ? 0.85 : 0,
         roughness: 0.62,
-        metalness: kind === 'bank' ? 0.25 : 0.05,
+        metalness: 0.05,
       }),
     )
     base.castShadow = true
@@ -132,14 +129,18 @@ export function createBoard(scene: THREE.Scene): BoardTile[] {
     label.position.z = 0.08
     group.add(label)
 
-    if (kind === 'property') {
-      const building = new THREE.Mesh(
-        new THREE.BoxGeometry(0.58, 0.7 + (index % 3) * 0.23, 0.58),
-        new THREE.MeshStandardMaterial({ color: 0x5eead4, emissive: 0x0f3a38, roughness: 0.45 }),
+    if (kind === 'start') {
+      const startBeacon = new THREE.Mesh(
+        new THREE.TorusGeometry(0.67, 0.08, 12, 40),
+        new THREE.MeshStandardMaterial({
+          color: 0x86efac,
+          emissive: 0x22c55e,
+          emissiveIntensity: 1.4,
+        }),
       )
-      building.position.set(0.62, 0.62, -0.55)
-      building.castShadow = true
-      group.add(building)
+      startBeacon.rotation.x = Math.PI / 2
+      startBeacon.position.y = 0.55
+      group.add(startBeacon)
     }
 
     group.position.copy(position)
@@ -148,17 +149,17 @@ export function createBoard(scene: THREE.Scene): BoardTile[] {
     return { index, name: TILE_NAMES[index], kind, position, mesh: group }
   })
 
-  const logo = new THREE.Mesh(
-    new THREE.CylinderGeometry(2.2, 2.2, 0.35, 48),
+  const centerDisc = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.55, 2.55, 0.35, 48),
     new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.3, roughness: 0.35 }),
   )
-  logo.position.y = 0.18
-  logo.castShadow = true
-  scene.add(logo)
+  centerDisc.position.y = 0.18
+  centerDisc.castShadow = true
+  scene.add(centerDisc)
 
   const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(1.45, 0.11, 16, 64),
-    new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x075985, emissiveIntensity: 1.3 }),
+    new THREE.TorusGeometry(1.72, 0.11, 16, 64),
+    new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0x92400e, emissiveIntensity: 1.3 }),
   )
   ring.rotation.x = Math.PI / 2
   ring.position.y = 0.42
