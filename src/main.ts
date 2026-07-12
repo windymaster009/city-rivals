@@ -1,6 +1,6 @@
 import './style.css'
 import * as THREE from 'three'
-import { createBoard, type BoardTile } from './game/board'
+import { createBoard, START_POSITION, type BoardTile } from './game/board'
 import {
   animateCharacterIdle,
   animateJumpPose,
@@ -123,7 +123,7 @@ function formatMoney(value: number): string {
 }
 
 function tileLabel(player: PlayerState): string {
-  return String(player.tileIndex + 1)
+  return player.tileIndex < 0 ? 'START' : String(player.tileIndex + 1)
 }
 
 function totalInventoryItems(player: PlayerState): number {
@@ -137,8 +137,8 @@ function playerOffset(player: PlayerState): THREE.Vector3 {
   return new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
 }
 
-function positionPlayerOnTile(player: PlayerState, tile: BoardTile): void {
-  const position = tile.position.clone().add(playerOffset(player))
+function positionPlayerAtStart(player: PlayerState): void {
+  const position = START_POSITION.clone().add(playerOffset(player))
   player.model.position.copy(position)
 }
 
@@ -327,6 +327,8 @@ function checkForWinner(): boolean {
 }
 
 function resolvePlaceholderTile(player: PlayerState): void {
+  if (player.tileIndex < 0) return
+
   const tile = tiles[player.tileIndex]
   addLog(`📍 ${player.name} landed on ${tile.name} — rule not mapped yet`)
   synchronizeLifeState(player)
@@ -367,7 +369,9 @@ async function rollTwoDice(): Promise<void> {
 
   for (let step = 0; step < total; step += 1) {
     const previousIndex = player.tileIndex
-    player.tileIndex = (player.tileIndex + 1) % tiles.length
+    player.tileIndex = previousIndex < 0
+      ? 0
+      : (previousIndex + 1) % tiles.length
 
     if (previousIndex === tiles.length - 1 && player.tileIndex === 0) {
       player.laps += 1
@@ -441,7 +445,7 @@ async function startNewGame(names: string[], startingMoney: number): Promise<voi
         maxHearts: 5,
         money: startingMoney,
         inventory: [],
-        tileIndex: 0,
+        tileIndex: -1,
         laps: 0,
         accent,
         model,
@@ -451,7 +455,7 @@ async function startNewGame(names: string[], startingMoney: number): Promise<voi
   )
 
   players.forEach((player) => {
-    positionPlayerOnTile(player, tiles[0])
+    positionPlayerAtStart(player)
     scene.add(player.model)
   })
 
@@ -471,6 +475,7 @@ async function startNewGame(names: string[], startingMoney: number): Promise<voi
     const characterName = String(player.model.userData.characterName ?? 'Character')
     addLog(`🧍 ${player.name} received ${characterName}`)
   })
+  addLog('🏁 START is outside the grid; Tile 63 loops directly to Tile 1')
   addLog('🧩 All 63 special tiles are placeholders for now')
   startTurn()
 }
