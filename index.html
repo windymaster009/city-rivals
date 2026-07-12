@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b1020" />
+    <link rel="icon" href="/favicon.svg" />
+    <title>City Rivals — 2.5D Board Prototype</title>
+  </head>
+  <body>
+    <div id="game-root">
+      <canvas id="game-canvas" aria-label="City Rivals 3D board"></canvas>
+
+      <header class="top-hud">
+        <div class="brand">
+          <span class="brand-mark">CR</span>
+          <div>
+            <strong>City Rivals</strong>
+            <small>2.5D board prototype</small>
+          </div>
+        </div>
+        <div id="player-status" class="player-status"></div>
+      </header>
+
+      <aside class="event-panel">
+        <div class="panel-title">LIVE MATCH</div>
+        <div id="turn-label" class="turn-label">Windy's turn</div>
+        <div id="event-log" class="event-log" aria-live="polite"></div>
+      </aside>
+
+      <section class="controls">
+        <div class="dice-card">
+          <span class="dice-caption">DICE</span>
+          <strong id="dice-value">–</strong>
+        </div>
+        <button id="roll-button" class="roll-button" type="button">
+          <span>🎲</span>
+          Roll Dice
+        </button>
+        <button id="camera-button" class="secondary-button" type="button">
+          Board View
+        </button>
+      </section>
+
+      <div id="loading" class="loading">Building the city…</div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
