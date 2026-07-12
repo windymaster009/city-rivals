@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0b1020" />
     <link rel="icon" href="/favicon.svg" />
-    <title>City Rivals — 2.5D Board Prototype</title>
+    <title>City Rivals — Cambodian Classic Prototype</title>
   </head>
   <body>
     <div id="game-root">
-      <canvas id="game-canvas" aria-label="City Rivals 3D board"></canvas>
+      <canvas id="game-canvas" aria-label="Cambodian classic 3D board"></canvas>
 
       <header class="top-hud">
         <div class="brand">
           <span class="brand-mark">CR</span>
           <div>
             <strong>City Rivals</strong>
-            <small>2.5D board prototype</small>
+            <small>Cambodian classic prototype</small>
           </div>
         </div>
         <div id="player-status" class="player-status"></div>
@@ -29,20 +29,25 @@
       </aside>
 
       <section class="controls">
-        <div class="dice-card">
-          <span class="dice-caption">DICE</span>
-          <strong id="dice-value">–</strong>
+        <div class="dice-card" aria-label="Two dice result">
+          <span class="dice-caption">TWO DICE</span>
+          <div class="dice-faces">
+            <strong id="dice-one">–</strong>
+            <span>+</span>
+            <strong id="dice-two">–</strong>
+          </div>
+          <small>Total <b id="dice-total">–</b></small>
         </div>
         <button id="roll-button" class="roll-button" type="button">
           <span>🎲</span>
-          Roll Dice
+          Roll 2 Dice
         </button>
         <button id="camera-button" class="secondary-button" type="button">
           Board View
         </button>
       </section>
 
-      <div id="loading" class="loading">Building the city…</div>
+      <div id="loading" class="loading">Preparing the board…</div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
