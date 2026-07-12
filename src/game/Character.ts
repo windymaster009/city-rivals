@@ -3,6 +3,7 @@ import {
   GLTFLoader,
   type GLTF,
 } from 'three/addons/loaders/GLTFLoader.js'
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
 
 export interface CharacterModelDefinition {
@@ -24,6 +25,8 @@ const loader = new GLTFLoader()
 const assetCache = new Map<string, Promise<GLTF>>()
 const LOAD_TIMEOUT_MS = 15_000
 const TARGET_CHARACTER_HEIGHT = 2.05
+const CHARACTER_CREASE_ANGLE = THREE.MathUtils.degToRad(70)
+const NORMAL_MAP_STRENGTH = 0.18
 
 let glowTexture: THREE.CanvasTexture | undefined
 
@@ -168,10 +171,53 @@ function createPlayerGlow(accent: number): {
   ring.position.y = 0.045
   ring.renderOrder = 4
 
-  const light = new THREE.PointLight(accent, 5, 4.2, 2)
+  // Keep the colour glow subtle. A strong light this close to the model
+  // exaggerates every triangle and makes smooth characters look 3D-printed.
+  const light = new THREE.PointLight(accent, 0.35, 3.5, 2)
   light.position.set(0, 0.42, 0)
 
   return { aura, auraMaterial, ring, ringMaterial, light }
+}
+
+function tuneCharacterMaterial(source: THREE.Material): THREE.Material {
+  const material = source.clone()
+
+  if (material instanceof THREE.MeshStandardMaterial) {
+    material.flatShading = false
+    material.roughness = THREE.MathUtils.clamp(material.roughness, 0.35, 0.72)
+    material.metalness = Math.min(material.metalness, 0.05)
+    material.envMapIntensity = 0.8
+
+    if (material.normalMap) {
+      material.normalScale.set(NORMAL_MAP_STRENGTH, NORMAL_MAP_STRENGTH)
+    }
+
+    material.needsUpdate = true
+  }
+
+  return material
+}
+
+function smoothCharacterGeometry(source: THREE.BufferGeometry): THREE.BufferGeometry {
+  const clonedGeometry = source.clone()
+
+  // Tangents were generated for the old normals. Removing them lets Three.js
+  // derive a fresh tangent basis for the softened normal map at render time.
+  clonedGeometry.deleteAttribute('normal')
+  clonedGeometry.deleteAttribute('tangent')
+
+  const smoothedGeometry = toCreasedNormals(
+    clonedGeometry,
+    CHARACTER_CREASE_ANGLE,
+  )
+
+  if (smoothedGeometry !== clonedGeometry) {
+    clonedGeometry.dispose()
+  }
+
+  smoothedGeometry.computeBoundingBox()
+  smoothedGeometry.computeBoundingSphere()
+  return smoothedGeometry
 }
 
 function cloneRenderableScene(source: THREE.Group): THREE.Group {
@@ -180,10 +226,17 @@ function cloneRenderableScene(source: THREE.Group): THREE.Group {
   visual.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return
 
-    object.geometry = object.geometry.clone()
+    const hasMorphTargets = Object.keys(object.geometry.morphAttributes).length > 0
+    const canRebuildNormals = !(object instanceof THREE.SkinnedMesh) && !hasMorphTargets
+
+    object.geometry = canRebuildNormals
+      ? smoothCharacterGeometry(object.geometry)
+      : object.geometry.clone()
+
     object.material = Array.isArray(object.material)
-      ? object.material.map((material) => material.clone())
-      : object.material.clone()
+      ? object.material.map(tuneCharacterMaterial)
+      : tuneCharacterMaterial(object.material)
+
     object.castShadow = true
     object.receiveShadow = true
   })
@@ -281,7 +334,7 @@ function updateGlowState(
 
   auraMaterial.opacity = 0.18 + (safeStrength * 0.34) + (safePulse * 0.08)
   ringMaterial.opacity = 0.26 + (safeStrength * 0.58) + (safePulse * 0.12)
-  light.intensity = 3.2 + (safeStrength * 8.5) + (safePulse * 1.8)
+  light.intensity = 0.15 + (safeStrength * 0.75) + (safePulse * 0.25)
 
   aura.scale.setScalar(0.88 + (safeStrength * 0.18) + (safePulse * 0.06))
   ring.scale.setScalar(0.94 + (safeStrength * 0.1) + (safePulse * 0.05))
