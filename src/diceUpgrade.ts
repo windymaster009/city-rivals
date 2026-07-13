@@ -66,11 +66,13 @@ if (rollButton && gameRoot) {
       })
     }
 
+    const box = diceBox
+
     if (!initializePromise) {
       initializePromise = (async () => {
         await nextPaint()
         await nextPaint()
-        await diceBox?.initialize()
+        await box.initialize()
       })().catch((error: unknown) => {
         diceBox = undefined
         initializePromise = undefined
@@ -79,7 +81,7 @@ if (rollButton && gameRoot) {
     }
 
     await initializePromise
-    return diceBox
+    return box
   }
 
   function readTwoDice(result: DiceRollResult): TwoDiceValues {
