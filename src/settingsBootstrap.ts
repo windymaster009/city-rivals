@@ -20,6 +20,18 @@ const originalSetSize = THREE.WebGLRenderer.prototype.setSize
 let settingsVersion = 1
 let currentSettings: Readonly<GameSettingsSnapshot> = gameSettings.get()
 
+function graphicsSignature(settings: Readonly<GameSettingsSnapshot>): string {
+  return [
+    settings.resolution,
+    settings.vsync,
+    settings.fpsLimit,
+    settings.shadowQuality,
+    settings.textureQuality,
+  ].join('|')
+}
+
+let currentGraphicsSignature = graphicsSignature(currentSettings)
+
 function shadowMapSize(quality: ShadowQualityOption): number {
   const sizes: Readonly<Record<ShadowQualityOption, number>> = {
     Off: 0,
@@ -80,7 +92,12 @@ function applyShadowQuality(
       && !(object instanceof THREE.PointLight)
     ) return
 
-    object.castShadow = quality !== 'Off' && object.castShadow
+    const savedCastShadow = typeof object.userData.settingsOriginalCastShadow === 'boolean'
+      ? object.userData.settingsOriginalCastShadow
+      : object.castShadow
+    object.userData.settingsOriginalCastShadow = savedCastShadow
+    object.castShadow = quality !== 'Off' && savedCastShadow
+
     if (size === 0 || object.shadow.mapSize.width === size) return
 
     object.shadow.mapSize.set(size, size)
@@ -225,7 +242,12 @@ window.addEventListener('resize', () => {
 })
 
 gameSettings.subscribe((settings) => {
+  const nextGraphicsSignature = graphicsSignature(settings)
+  if (nextGraphicsSignature !== currentGraphicsSignature) {
+    currentGraphicsSignature = nextGraphicsSignature
+    settingsVersion += 1
+  }
+
   currentSettings = settings
-  settingsVersion += 1
   updateCrosshair(settings)
 })
