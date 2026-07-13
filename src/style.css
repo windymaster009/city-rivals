@@ -347,29 +347,93 @@ button, input, select { font: inherit; }
   display: grid;
   place-items: center;
   padding: 18px;
-  background: rgba(2, 6, 18, 0.76);
-  backdrop-filter: blur(13px);
+  background:
+    radial-gradient(circle at 50% 28%, rgba(247, 200, 75, 0.18), transparent 28%),
+    radial-gradient(circle at 22% 76%, rgba(63, 156, 62, 0.18), transparent 25%),
+    linear-gradient(180deg, #182233, #12172a 54%, #120e1d);
   transition: opacity 220ms ease, visibility 220ms ease;
 }
 
 .setup-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
 
 .setup-card {
-  width: min(660px, 100%);
+  position: relative;
+  width: min(680px, 100%);
   max-height: calc(100vh - 36px);
   overflow: auto;
-  padding: 25px;
-  border: 1px solid rgba(251, 191, 36, 0.2);
-  border-radius: 24px;
+  padding: 42px 30px 30px;
+  border: 9px solid transparent;
+  border-radius: 28px;
   background:
-    radial-gradient(circle at top right, rgba(251, 191, 36, 0.11), transparent 35%),
-    linear-gradient(145deg, rgba(16, 24, 43, 0.98), rgba(7, 12, 25, 0.98));
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.52);
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.28), transparent 18%) padding-box,
+    radial-gradient(circle at 80% 66%, rgba(154, 94, 45, 0.12), transparent 28%) padding-box,
+    repeating-linear-gradient(34deg, rgba(80, 49, 24, 0.035) 0 2px, transparent 2px 8px) padding-box,
+    linear-gradient(135deg, var(--rpg-paper-100), #f2cf96 54%, var(--rpg-paper-300)) padding-box,
+    linear-gradient(145deg, var(--rpg-stone-500), var(--rpg-stone-900) 54%, #20232b) border-box;
+  box-shadow:
+    0 24px 44px var(--rpg-shadow),
+    inset 0 0 26px rgba(91, 52, 22, 0.2),
+    inset 0 3px 1px rgba(255, 255, 255, 0.34);
 }
 
-.setup-kicker { color: #fbbf24; font-size: 9px; font-weight: 900; letter-spacing: 0.16em; }
-.setup-card h1 { margin: 7px 0 0; font-size: clamp(27px, 4vw, 40px); line-height: 1; letter-spacing: -0.055em; }
-.setup-card > p { max-width: 540px; margin: 12px 0 0; color: #aebbd0; font-size: 12px; line-height: 1.55; }
+.setup-card::before {
+  content: "Match Setup";
+  position: sticky;
+  top: -42px;
+  z-index: 1;
+  display: block;
+  width: fit-content;
+  min-width: 150px;
+  margin: -42px auto 22px;
+  padding: 11px 22px 10px;
+  border-radius: 6px 6px 10px 10px;
+  background: linear-gradient(180deg, #9ba0a9, #69717e);
+  color: var(--rpg-purple);
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 15px rgba(55, 43, 34, 0.22), inset 0 2px rgba(255, 255, 255, 0.24);
+}
+
+.setup-card::after {
+  content: "";
+  position: absolute;
+  right: 36px;
+  top: 18px;
+  width: 78px;
+  height: 18px;
+  background: rgba(48, 50, 58, 0.45);
+  clip-path: polygon(0 45%, 68% 42%, 100% 52%, 36% 58%);
+  pointer-events: none;
+}
+
+.setup-kicker {
+  color: var(--rpg-paper-600);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.setup-card h1 {
+  margin: 8px 0 0;
+  color: var(--rpg-purple);
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 0.95;
+  letter-spacing: 0;
+  text-shadow: 0 3px #d3a066, 0 8px 14px rgba(63, 37, 75, 0.16);
+}
+
+.setup-card > p {
+  max-width: 540px;
+  margin: 13px 0 0;
+  color: #6d4539;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.55;
+}
 
 .setup-options {
   display: grid;
@@ -381,24 +445,35 @@ button, input, select { font: inherit; }
 .setup-options label,
 .player-name-field { display: grid; gap: 6px; }
 .setup-options label > span,
-.player-name-field > span { color: #94a3b8; font-size: 9px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+.player-name-field > span {
+  color: var(--rpg-purple);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
 
 .setup-options input,
 .setup-options select,
 .player-name-field input {
   width: 100%;
-  height: 43px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 11px;
+  height: 46px;
+  border: 2px solid rgba(101, 66, 46, 0.24);
+  border-radius: 12px;
   outline: 0;
-  padding: 0 12px;
-  background: rgba(3, 8, 20, 0.72);
-  color: #f8fafc;
+  padding: 0 13px;
+  background: rgba(255, 248, 220, 0.52);
+  color: var(--rpg-ink);
+  font-weight: 900;
+  box-shadow: inset 0 3px 8px rgba(100, 64, 36, 0.13);
 }
 
 .setup-options input:focus,
 .setup-options select:focus,
-.player-name-field input:focus { border-color: rgba(251, 191, 36, 0.65); }
+.player-name-field input:focus {
+  border-color: var(--rpg-orange);
+  outline: 3px solid rgba(247, 200, 75, 0.48);
+}
 
 .player-name-fields {
   display: grid;
@@ -414,26 +489,44 @@ button, input, select { font: inherit; }
   margin-top: 18px;
 }
 .setup-rules span {
-  padding: 6px 9px;
+  padding: 7px 11px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.08);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  color: #cbd5e1;
-  font-size: 9px;
-  font-weight: 700;
+  background: rgba(255, 248, 220, 0.38);
+  border: 2px solid rgba(101, 66, 46, 0.14);
+  color: var(--rpg-purple);
+  font-size: 10px;
+  font-weight: 900;
+  box-shadow: inset 0 3px 8px rgba(100, 64, 36, 0.1);
 }
 
 .start-button {
   width: 100%;
-  height: 50px;
+  height: 54px;
   margin-top: 18px;
-  border-radius: 13px;
-  background: linear-gradient(135deg, #fbbf24, #f97316);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffbd42, var(--rpg-orange));
   color: #221204;
   font-weight: 900;
-  box-shadow: 0 14px 35px rgba(249, 115, 22, 0.2);
+  text-shadow: 0 1px rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 6px 0 #a64720,
+    0 14px 18px rgba(82, 42, 32, 0.24),
+    inset 0 3px rgba(255, 255, 255, 0.28);
 }
-.start-button:hover { transform: translateY(-2px); filter: brightness(1.05); }
+.start-button:hover {
+  transform: translateY(-2px) scale(1.015);
+  filter: brightness(1.06);
+  box-shadow:
+    0 7px 0 #a64720,
+    0 0 22px rgba(247, 200, 75, 0.38),
+    0 16px 18px rgba(82, 42, 32, 0.26),
+    inset 0 3px rgba(255, 255, 255, 0.32);
+}
+
+.start-button:active {
+  transform: translateY(4px) scale(0.99);
+  box-shadow: 0 2px 0 #a64720, inset 0 2px rgba(255, 255, 255, 0.22);
+}
 
 .loading {
   position: absolute;
