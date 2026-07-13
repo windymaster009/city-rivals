@@ -1,0 +1,22 @@
+:root {
+  --rpg-stone-900: #31333b;
+  --rpg-stone-700: #5e6470;
+  --rpg-stone-500: #8a9096;
+  --rpg-paper-100: #fee9bd;
+  --rpg-paper-300: #e9c58d;
+  --rpg-paper-600: #a76f3c;
+  --rpg-forest: #3f9c3e;
+  --rpg-forest-dark: #247233;
+  --rpg-gold: #f7c84b;
+  --rpg-brown: #65422e;
+  --rpg-orange: #f07a2a;
+  --rpg-purple: #3e254b;
+  --rpg-red: #c53b43;
+  --rpg-cyan: #36bdd2;
+  --rpg-ink: #432d2f;
+  --rpg-shadow: rgba(28, 18, 18, 0.34);
+  --rpg-panel-radius: 18px;
+  --rpg-button-radius: 999px;
+  --rpg-fast: 160ms cubic-bezier(.2, .9, .25, 1);
+  --rpg-smooth: 280ms cubic-bezier(.2, .9, .25, 1);
+}
