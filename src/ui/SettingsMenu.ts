@@ -133,12 +133,17 @@ export class SettingsMenu {
   private readonly tabs = createElement('div', 'settings-tabs')
   private readonly tabButtons = new Map<TabName, HTMLButtonElement>()
   private readonly backButton = createButton('Back', 'rpg-button rpg-button-muted settings-back')
+  private readonly onBack: () => void
+  private readonly onLogout: () => void
   private activeTab: TabName = 'Graphics'
   private lastLanguage = gameSettings.get().language
   private lastKeyBindings = gameSettings.get().keyBindings
   private lastFullscreen = gameSettings.get().fullscreen
 
-  constructor(private readonly onBack: () => void, private readonly onLogout: () => void) {
+  constructor(onBack: () => void, onLogout: () => void) {
+    this.onBack = onBack
+    this.onLogout = onLogout
+
     const tabNames: TabName[] = ['Graphics', 'Audio', 'Controls', 'Gameplay', 'Language', 'Account']
     tabNames.forEach((tab) => {
       const button = createButton(tab, 'tab-button')
