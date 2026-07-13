@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { getTileArtworkUrl } from './tileAssets'
 
 export const BOARD_COLUMNS = 7
 export const BOARD_ROWS = 9
@@ -31,6 +32,7 @@ const TILE_SPACING = 1.78
 const TILE_SIZE = 1.58
 const HALF_COLUMNS = (BOARD_COLUMNS - 1) / 2
 const HALF_ROWS = (BOARD_ROWS - 1) / 2
+const tileTextureLoader = new THREE.TextureLoader()
 
 /**
  * START is a waiting space outside the 63 numbered board tiles.
@@ -59,8 +61,17 @@ interface TileVisualOptions {
   baseColor: number
   idleEmissive: number
   idleEmissiveIntensity: number
-  labelTexture: THREE.CanvasTexture
+  labelTexture: THREE.Texture
+  artworkUrl?: string
   showBeacon?: boolean
+}
+
+function configureTileTexture(texture: THREE.Texture): void {
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 8
+  texture.minFilter = THREE.LinearMipmapLinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.needsUpdate = true
 }
 
 function makeTileLabel(tileNumber: number): THREE.CanvasTexture {
@@ -89,8 +100,7 @@ function makeTileLabel(tileNumber: number): THREE.CanvasTexture {
   ctx.fillText('PLACEHOLDER', 256, 400)
 
   const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.anisotropy = 4
+  configureTileTexture(texture)
   return texture
 }
 
@@ -117,9 +127,30 @@ function makeStartLabel(): THREE.CanvasTexture {
   ctx.fillText('START', 256, 256)
 
   const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.anisotropy = 4
+  configureTileTexture(texture)
   return texture
+}
+
+function applyArtworkWhenLoaded(
+  material: THREE.MeshBasicMaterial,
+  fallbackTexture: THREE.Texture,
+  artworkUrl: string | undefined,
+): void {
+  if (!artworkUrl) return
+
+  tileTextureLoader.load(
+    artworkUrl,
+    (texture) => {
+      configureTileTexture(texture)
+      material.map = texture
+      material.needsUpdate = true
+      fallbackTexture.dispose()
+    },
+    undefined,
+    (error: unknown) => {
+      console.warn(`Could not load tile artwork: ${artworkUrl}`, error)
+    },
+  )
 }
 
 /**
@@ -204,13 +235,16 @@ function createTileVisual(scene: THREE.Scene, options: TileVisualOptions): Board
   glowShell.renderOrder = 1
   group.add(glowShell)
 
+  const labelMaterial = new THREE.MeshBasicMaterial({
+    map: options.labelTexture,
+    transparent: true,
+    depthWrite: false,
+  })
+  applyArtworkWhenLoaded(labelMaterial, options.labelTexture, options.artworkUrl)
+
   const label = new THREE.Mesh(
     new THREE.PlaneGeometry(TILE_SIZE - 0.16, TILE_SIZE - 0.16),
-    new THREE.MeshBasicMaterial({
-      map: options.labelTexture,
-      transparent: true,
-      depthWrite: false,
-    }),
+    labelMaterial,
   )
   label.rotation.x = -Math.PI / 2
   label.position.y = 0.322
@@ -369,20 +403,22 @@ export function createBoard(scene: THREE.Scene): BoardState {
 
   const cells = buildSnakePath()
   const tiles: BoardTile[] = cells.map((cell, index) => {
+    const tileNumber = index + 1
     const rowColor = cell.row % 2 === 0 ? 0x1e293b : 0x24324a
 
     return createTileVisual(scene, {
       index,
-      number: index + 1,
+      number: tileNumber,
       row: cell.row,
       column: cell.column,
-      name: `Tile ${index + 1}`,
+      name: `Tile ${tileNumber}`,
       kind: 'placeholder',
       position: cell.position,
       baseColor: rowColor,
       idleEmissive: 0x000000,
       idleEmissiveIntensity: 0,
-      labelTexture: makeTileLabel(index + 1),
+      labelTexture: makeTileLabel(tileNumber),
+      artworkUrl: getTileArtworkUrl(tileNumber),
     })
   })
 
