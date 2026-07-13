@@ -1,5 +1,7 @@
 import './style.css'
 import * as THREE from 'three'
+import { createGameUI } from './ui/GameUI'
+import { createBoard, START_POSITION, type BoardTile } from './game/board'
 import { createBoard, setBoardTileGlow, type BoardTile } from './game/board'
 import {
   animateCharacterIdle,
@@ -34,6 +36,8 @@ const setupForm = requireElement<HTMLFormElement>('#setup-form')
 const playerCountSelect = requireElement<HTMLSelectElement>('#player-count')
 const startingMoneyInput = requireElement<HTMLInputElement>('#starting-money')
 const playerNameFields = requireElement<HTMLElement>('#player-name-fields')
+const gameRoot = requireElement<HTMLElement>('#game-root')
+const fantasyUi = createGameUI(gameRoot, '0.1.0')
 
 const PLAYER_COLORS = [
   0x22d3ee,
@@ -98,6 +102,7 @@ let gameStarted = false
 let gameOver = false
 let logEntries: string[] = []
 const clock = new THREE.Clock()
+let simulatedPing = 46
 
 function escapeHtml(value: string): string {
   return value
@@ -564,6 +569,65 @@ cameraButton.addEventListener('click', () => {
 
 newMatchButton.addEventListener('click', showSetup)
 
+fantasyUi.on('playOnline', () => {
+  fantasyUi.hideMainMenu()
+  showSetup()
+})
+
+fantasyUi.on('createRoom', (settings) => {
+  fantasyUi.showChatMessage({ player: 'System', message: `${settings.roomName} was created.`, tone: 'system' })
+})
+
+fantasyUi.on('joinRoom', () => {
+  fantasyUi.showNotification({ title: 'Joined Lobby', message: 'Waiting for the host to start.', type: 'success' })
+})
+
+fantasyUi.on('refreshRooms', () => {
+  fantasyUi.showNotification({ title: 'Rooms Refreshed', message: 'Latest room list received.', type: 'info' })
+})
+
+fantasyUi.on('invite', () => {
+  fantasyUi.showAchievement('Invite Sent', 'A party invite was copied for your squad.')
+})
+
+fantasyUi.on('startGame', () => {
+  fantasyUi.hideMainMenu()
+  showSetup()
+})
+
+fantasyUi.on('leaveLobby', () => {
+  fantasyUi.showNotification({ title: 'Left Lobby', message: 'Returned to the main menu.', type: 'warning' })
+})
+
+fantasyUi.on('resume', () => {
+  fantasyUi.hideMainMenu()
+})
+
+fantasyUi.on('leaveMatch', () => {
+  fantasyUi.showMainMenu()
+  setupScreen.classList.add('hidden')
+})
+
+fantasyUi.on('quit', () => {
+  fantasyUi.showDialog('Exit Game', 'Browser games cannot close the tab automatically. Return to your desktop from the browser.')
+})
+
+fantasyUi.on('logout', () => {
+  fantasyUi.showNotification({ title: 'Logged Out', message: 'Guest account session cleared.', type: 'warning' })
+})
+
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setupScreen.classList.add('hidden')
+    fantasyUi.showMainMenu()
+  }
+})
+
+window.setInterval(() => {
+  simulatedPing = Math.max(24, Math.min(188, simulatedPing + Math.round((Math.random() - 0.45) * 18)))
+  fantasyUi.updatePing(simulatedPing)
+}, 1800)
+
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
@@ -592,5 +656,7 @@ renderPlayerNameFields()
 updateHud()
 resetDiceDisplay()
 cameraController.setBoardView()
+setupScreen.classList.add('hidden')
 loading.classList.add('hidden')
+fantasyUi.updatePing(simulatedPing)
 render()
