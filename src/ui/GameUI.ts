@@ -1,4 +1,5 @@
 import { CreateRoomMenu } from './CreateRoomMenu'
+import { CreditsMenu } from './CreditsMenu'
 import { Dialog } from './Dialog'
 import { createButton, createElement } from './dom'
 import { UiEventBus } from './events'
@@ -82,6 +83,7 @@ export class GameUI {
       () => emit('quit', undefined),
     )
     const inventoryMenu = new InventoryMenu()
+    const creditsMenu = new CreditsMenu(() => this.showView('main'))
 
     this.registerView('main', this.mainMenu.element)
     this.registerView('create-room', createRoom.element)
@@ -91,7 +93,7 @@ export class GameUI {
     this.registerView('pause', pauseMenu.element)
     this.registerView('profile', this.placeholderPanel('Profile', 'Guest Knight', 'Avatar, cosmetics, guild banner, and account stats live here.'))
     this.registerView('leaderboard', this.placeholderPanel('Leaderboard', 'Top Guilds', 'Seasonal rankings will be fed by the multiplayer service.'))
-    this.registerView('credits', this.placeholderPanel('Credits', 'Made for City Rivals', 'A compact fantasy UI shell for the multiplayer prototype.'))
+    this.registerView('credits', creditsMenu.element)
 
     const menuStage = createElement('main', 'menu-stage')
     this.views.forEach((view) => menuStage.append(view))
