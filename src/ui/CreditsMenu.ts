@@ -14,7 +14,7 @@ interface Contributor {
   contribution: string
   links: CreditLink[]
   featured?: boolean
-  founder?: boolean
+  badge?: string
 }
 
 /**
@@ -28,7 +28,7 @@ const CONTRIBUTORS: Contributor[] = [
     contribution:
       'Original game concept, Cambodian board-game research, game design, Three.js development, and project direction.',
     featured: true,
-    founder: true,
+    badge: 'Founder',
     links: [
       {
         label: 'GitHub',
@@ -37,14 +37,14 @@ const CONTRIBUTORS: Contributor[] = [
       },
     ],
   },
-   {
+  {
     name: 'MEAS PUTTIVIREAK',
     initials: 'MP',
     role: 'Creator & Developer',
     contribution:
       'game concept, Cambodian board-game research, game design, node.js development.',
     featured: true,
-    founder: true,
+    badge: 'CEO',
     links: [
       {
         label: 'GitHub',
@@ -200,8 +200,8 @@ export class CreditsMenu {
     const header = createElement('div', 'credit-card-header')
     header.append(avatar, identity)
 
-    if (contributor.founder) {
-      card.append(createElement('span', 'credit-founder-badge', 'Founder'))
+    if (contributor.badge) {
+      card.append(createElement('span', 'credit-badge', contributor.badge))
     }
 
     const contribution = createElement('p', 'credit-contribution', contributor.contribution)
