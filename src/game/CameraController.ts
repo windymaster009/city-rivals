@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { gameSettings } from '../settings/GameSettings'
 import type { CameraMode } from './types'
 
 export class CameraController {
@@ -13,12 +14,19 @@ export class CameraController {
   private boardYaw = 0
   private boardPitch = 0.75
   private distanceScale = 1
+  private draggingPointerId?: number
+  private lastPointerX = 0
+  private lastPointerY = 0
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera
     this.applyBoardPosition(camera.position)
     this.currentLookAt.set(0, 0, 0)
     camera.lookAt(this.currentLookAt)
+
+    gameSettings.subscribe((settings) => this.setDistance(settings.cameraDistance))
+    this.bindBoardCameraInput()
+    window.addEventListener('city-rivals:reset-camera', () => this.resetBoardOrbit())
   }
 
   setBoardView(): void {
@@ -95,6 +103,53 @@ export class CameraController {
     this.camera.position.lerp(this.desiredPosition, smooth)
     this.currentLookAt.lerp(this.desiredLookAt, lookSmooth)
     this.camera.lookAt(this.currentLookAt)
+  }
+
+  private bindBoardCameraInput(): void {
+    const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')
+    if (!canvas) return
+
+    canvas.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || this.mode !== 'board') return
+      this.draggingPointerId = event.pointerId
+      this.lastPointerX = event.clientX
+      this.lastPointerY = event.clientY
+      canvas.setPointerCapture(event.pointerId)
+      canvas.classList.add('camera-dragging')
+    })
+
+    canvas.addEventListener('pointermove', (event) => {
+      if (event.pointerId !== this.draggingPointerId) return
+
+      const deltaX = event.clientX - this.lastPointerX
+      const deltaY = event.clientY - this.lastPointerY
+      this.lastPointerX = event.clientX
+      this.lastPointerY = event.clientY
+
+      const settings = gameSettings.get()
+      this.orbitBoard(deltaX, deltaY, settings.mouseSensitivity, settings.invertMouse)
+    })
+
+    const finishDrag = (event: PointerEvent): void => {
+      if (event.pointerId !== this.draggingPointerId) return
+      this.draggingPointerId = undefined
+      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId)
+      canvas.classList.remove('camera-dragging')
+    }
+
+    canvas.addEventListener('pointerup', finishDrag)
+    canvas.addEventListener('pointercancel', finishDrag)
+    canvas.addEventListener('dblclick', () => {
+      if (this.mode === 'board') this.resetBoardOrbit()
+    })
+
+    canvas.addEventListener('wheel', (event) => {
+      if (this.mode !== 'board') return
+      event.preventDefault()
+      const current = gameSettings.get().cameraDistance
+      const next = THREE.MathUtils.clamp(current + Math.sign(event.deltaY) * 4, 1, 100)
+      gameSettings.set('cameraDistance', next)
+    }, { passive: false })
   }
 
   private applyBoardPosition(target: THREE.Vector3): void {
