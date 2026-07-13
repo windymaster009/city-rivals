@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { getTileArtworkUrl } from './tileAssets'
 
 export const BOARD_COLUMNS = 7
 export const BOARD_ROWS = 9
@@ -13,12 +14,25 @@ export interface BoardTile {
   kind: 'start' | 'placeholder'
   position: THREE.Vector3
   mesh: THREE.Group
+  baseColor: THREE.Color
+  idleEmissive: THREE.Color
+  idleEmissiveIntensity: number
+  baseMaterial: THREE.MeshStandardMaterial
+  glowShell: THREE.Mesh
+  glowMaterial: THREE.MeshBasicMaterial
+  glowLight: THREE.PointLight
+}
+
+export interface BoardState {
+  tiles: BoardTile[]
+  startTile: BoardTile
 }
 
 const TILE_SPACING = 1.78
 const TILE_SIZE = 1.58
 const HALF_COLUMNS = (BOARD_COLUMNS - 1) / 2
 const HALF_ROWS = (BOARD_ROWS - 1) / 2
+const tileTextureLoader = new THREE.TextureLoader()
 
 /**
  * START is a waiting space outside the 63 numbered board tiles.
@@ -34,6 +48,30 @@ interface PathCell {
   row: number
   column: number
   position: THREE.Vector3
+}
+
+interface TileVisualOptions {
+  index: number
+  number: number
+  row: number
+  column: number
+  name: string
+  kind: BoardTile['kind']
+  position: THREE.Vector3
+  baseColor: number
+  idleEmissive: number
+  idleEmissiveIntensity: number
+  labelTexture: THREE.Texture
+  artworkUrl?: string
+  showBeacon?: boolean
+}
+
+function configureTileTexture(texture: THREE.Texture): void {
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 8
+  texture.minFilter = THREE.LinearMipmapLinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.needsUpdate = true
 }
 
 function makeTileLabel(tileNumber: number): THREE.CanvasTexture {
@@ -62,8 +100,7 @@ function makeTileLabel(tileNumber: number): THREE.CanvasTexture {
   ctx.fillText('PLACEHOLDER', 256, 400)
 
   const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.anisotropy = 4
+  configureTileTexture(texture)
   return texture
 }
 
@@ -90,9 +127,30 @@ function makeStartLabel(): THREE.CanvasTexture {
   ctx.fillText('START', 256, 256)
 
   const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.anisotropy = 4
+  configureTileTexture(texture)
   return texture
+}
+
+function applyArtworkWhenLoaded(
+  material: THREE.MeshBasicMaterial,
+  fallbackTexture: THREE.Texture,
+  artworkUrl: string | undefined,
+): void {
+  if (!artworkUrl) return
+
+  tileTextureLoader.load(
+    artworkUrl,
+    (texture) => {
+      configureTileTexture(texture)
+      material.map = texture
+      material.needsUpdate = true
+      fallbackTexture.dispose()
+    },
+    undefined,
+    (error: unknown) => {
+      console.warn(`Could not load tile artwork: ${artworkUrl}`, error)
+    },
+  )
 }
 
 /**
@@ -135,7 +193,105 @@ function createRowGuide(scene: THREE.Scene, row: number): void {
   scene.add(guide)
 }
 
-function createStartSpace(scene: THREE.Scene): void {
+function createTileVisual(scene: THREE.Scene, options: TileVisualOptions): BoardTile {
+  const group = new THREE.Group()
+  const baseColor = new THREE.Color(options.baseColor)
+  const idleEmissive = new THREE.Color(options.idleEmissive)
+
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    color: baseColor,
+    emissive: idleEmissive,
+    emissiveIntensity: options.idleEmissiveIntensity,
+    roughness: 0.62,
+    metalness: 0.05,
+  })
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(TILE_SIZE, 0.28, TILE_SIZE),
+    baseMaterial,
+  )
+  base.castShadow = true
+  base.receiveShadow = true
+  base.position.y = 0.14
+  group.add(base)
+
+  // This transparent shell belongs to the tile block itself. When occupied,
+  // its top and four sides light up in the player's color.
+  const glowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    depthTest: true,
+    toneMapped: false,
+    side: THREE.DoubleSide,
+  })
+  const glowShell = new THREE.Mesh(
+    new THREE.BoxGeometry(TILE_SIZE + 0.075, 0.34, TILE_SIZE + 0.075),
+    glowMaterial,
+  )
+  glowShell.position.y = 0.14
+  glowShell.renderOrder = 1
+  group.add(glowShell)
+
+  const labelMaterial = new THREE.MeshBasicMaterial({
+    map: options.labelTexture,
+    transparent: true,
+    depthWrite: false,
+  })
+  applyArtworkWhenLoaded(labelMaterial, options.labelTexture, options.artworkUrl)
+
+  const label = new THREE.Mesh(
+    new THREE.PlaneGeometry(TILE_SIZE - 0.16, TILE_SIZE - 0.16),
+    labelMaterial,
+  )
+  label.rotation.x = -Math.PI / 2
+  label.position.y = 0.322
+  label.renderOrder = 2
+  group.add(label)
+
+  const glowLight = new THREE.PointLight(0xffffff, 0, 4.8, 2)
+  glowLight.position.y = 0.86
+  group.add(glowLight)
+
+  if (options.showBeacon) {
+    const beacon = new THREE.Mesh(
+      new THREE.TorusGeometry(0.54, 0.065, 12, 40),
+      new THREE.MeshStandardMaterial({
+        color: 0x86efac,
+        emissive: 0x22c55e,
+        emissiveIntensity: 1.5,
+      }),
+    )
+    beacon.rotation.x = Math.PI / 2
+    beacon.position.y = 0.43
+    group.add(beacon)
+  }
+
+  group.position.copy(options.position)
+  scene.add(group)
+
+  return {
+    index: options.index,
+    number: options.number,
+    row: options.row,
+    column: options.column,
+    name: options.name,
+    kind: options.kind,
+    position: options.position,
+    mesh: group,
+    baseColor,
+    idleEmissive,
+    idleEmissiveIntensity: options.idleEmissiveIntensity,
+    baseMaterial,
+    glowShell,
+    glowMaterial,
+    glowLight,
+  }
+}
+
+function createStartSpace(scene: THREE.Scene): BoardTile {
   const pedestal = new THREE.Mesh(
     new THREE.BoxGeometry(TILE_SIZE + 0.36, 0.72, TILE_SIZE + 0.36),
     new THREE.MeshStandardMaterial({
@@ -152,52 +308,77 @@ function createStartSpace(scene: THREE.Scene): void {
   pedestal.receiveShadow = true
   scene.add(pedestal)
 
-  const group = new THREE.Group()
-
-  const base = new THREE.Mesh(
-    new THREE.BoxGeometry(TILE_SIZE, 0.28, TILE_SIZE),
-    new THREE.MeshStandardMaterial({
-      color: 0x166534,
-      emissive: 0x052e16,
-      emissiveIntensity: 0.95,
-      roughness: 0.62,
-      metalness: 0.05,
-    }),
-  )
-  base.castShadow = true
-  base.receiveShadow = true
-  base.position.y = 0.14
-  group.add(base)
-
-  const label = new THREE.Mesh(
-    new THREE.PlaneGeometry(TILE_SIZE - 0.16, TILE_SIZE - 0.16),
-    new THREE.MeshBasicMaterial({
-      map: makeStartLabel(),
-      transparent: true,
-      depthWrite: false,
-    }),
-  )
-  label.rotation.x = -Math.PI / 2
-  label.position.y = 0.292
-  group.add(label)
-
-  const beacon = new THREE.Mesh(
-    new THREE.TorusGeometry(0.54, 0.065, 12, 40),
-    new THREE.MeshStandardMaterial({
-      color: 0x86efac,
-      emissive: 0x22c55e,
-      emissiveIntensity: 1.5,
-    }),
-  )
-  beacon.rotation.x = Math.PI / 2
-  beacon.position.y = 0.42
-  group.add(beacon)
-
-  group.position.copy(START_POSITION)
-  scene.add(group)
+  return createTileVisual(scene, {
+    index: -1,
+    number: 0,
+    row: 0,
+    column: -1,
+    name: 'Start',
+    kind: 'start',
+    position: START_POSITION.clone(),
+    baseColor: 0x166534,
+    idleEmissive: 0x052e16,
+    idleEmissiveIntensity: 0.95,
+    labelTexture: makeStartLabel(),
+    showBeacon: true,
+  })
 }
 
-export function createBoard(scene: THREE.Scene): BoardTile[] {
+function mixColors(colors: readonly number[]): THREE.Color {
+  const mixed = new THREE.Color(0x000000)
+
+  for (const colorValue of colors) {
+    mixed.r += ((colorValue >> 16) & 0xff) / 255
+    mixed.g += ((colorValue >> 8) & 0xff) / 255
+    mixed.b += (colorValue & 0xff) / 255
+  }
+
+  return mixed.multiplyScalar(1 / Math.max(colors.length, 1))
+}
+
+/**
+ * Apply occupancy lighting directly to a board tile.
+ * Multiple players blend their colors; the active player's color is favored.
+ */
+export function setBoardTileGlow(
+  tile: BoardTile,
+  occupantColors: readonly number[],
+  activeColor: number | undefined,
+  pulse: number,
+): void {
+  if (occupantColors.length === 0) {
+    tile.baseMaterial.color.copy(tile.baseColor)
+    tile.baseMaterial.emissive.copy(tile.idleEmissive)
+    tile.baseMaterial.emissiveIntensity = tile.idleEmissiveIntensity
+    tile.glowMaterial.opacity = 0
+    tile.glowLight.intensity = 0
+    tile.glowShell.scale.setScalar(1)
+    return
+  }
+
+  const mixed = mixColors(occupantColors)
+  if (activeColor !== undefined) {
+    mixed.lerp(new THREE.Color(activeColor), 0.34)
+  }
+
+  const safePulse = THREE.MathUtils.clamp(pulse, 0, 1)
+  const sharedBoost = Math.min((occupantColors.length - 1) * 0.16, 0.36)
+  const activeBoost = activeColor === undefined ? 0 : 0.26
+  const strength = THREE.MathUtils.clamp(0.58 + sharedBoost + activeBoost, 0, 1.2)
+
+  tile.baseMaterial.color.copy(tile.baseColor).lerp(mixed, 0.14 + (strength * 0.12))
+  tile.baseMaterial.emissive.copy(mixed)
+  tile.baseMaterial.emissiveIntensity = 0.9 + (strength * 1.8) + (safePulse * 0.48)
+
+  tile.glowMaterial.color.copy(mixed)
+  tile.glowMaterial.opacity = 0.1 + (strength * 0.26) + (safePulse * 0.08)
+  tile.glowShell.scale.setScalar(1 + (safePulse * 0.016))
+
+  tile.glowLight.color.copy(mixed)
+  tile.glowLight.intensity = 2.8 + (strength * 7.5) + (safePulse * 1.7)
+}
+
+export function createBoard(scene: THREE.Scene): BoardState {
   const boardWidth = ((BOARD_COLUMNS - 1) * TILE_SPACING) + TILE_SIZE + 1.15
   const boardDepth = ((BOARD_ROWS - 1) * TILE_SPACING) + TILE_SIZE + 1.15
 
@@ -218,54 +399,28 @@ export function createBoard(scene: THREE.Scene): BoardTile[] {
   scene.add(innerBase)
 
   for (let row = 0; row < BOARD_ROWS; row += 1) createRowGuide(scene, row)
-  createStartSpace(scene)
+  const startTile = createStartSpace(scene)
 
   const cells = buildSnakePath()
   const tiles: BoardTile[] = cells.map((cell, index) => {
-    const group = new THREE.Group()
+    const tileNumber = index + 1
     const rowColor = cell.row % 2 === 0 ? 0x1e293b : 0x24324a
 
-    const base = new THREE.Mesh(
-      new THREE.BoxGeometry(TILE_SIZE, 0.28, TILE_SIZE),
-      new THREE.MeshStandardMaterial({
-        color: rowColor,
-        emissive: 0x000000,
-        emissiveIntensity: 0,
-        roughness: 0.62,
-        metalness: 0.05,
-      }),
-    )
-    base.castShadow = true
-    base.receiveShadow = true
-    base.position.y = 0.14
-    group.add(base)
-
-    const label = new THREE.Mesh(
-      new THREE.PlaneGeometry(TILE_SIZE - 0.16, TILE_SIZE - 0.16),
-      new THREE.MeshBasicMaterial({
-        map: makeTileLabel(index + 1),
-        transparent: true,
-        depthWrite: false,
-      }),
-    )
-    label.rotation.x = -Math.PI / 2
-    label.position.y = 0.292
-    group.add(label)
-
-    group.position.copy(cell.position)
-    scene.add(group)
-
-    return {
+    return createTileVisual(scene, {
       index,
-      number: index + 1,
+      number: tileNumber,
       row: cell.row,
       column: cell.column,
-      name: `Tile ${index + 1}`,
+      name: `Tile ${tileNumber}`,
       kind: 'placeholder',
       position: cell.position,
-      mesh: group,
-    }
+      baseColor: rowColor,
+      idleEmissive: 0x000000,
+      idleEmissiveIntensity: 0,
+      labelTexture: makeTileLabel(tileNumber),
+      artworkUrl: getTileArtworkUrl(tileNumber),
+    })
   })
 
-  return tiles
+  return { tiles, startTile }
 }
