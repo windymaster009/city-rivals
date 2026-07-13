@@ -134,6 +134,9 @@ export class SettingsMenu {
   private readonly tabButtons = new Map<TabName, HTMLButtonElement>()
   private readonly backButton = createButton('Back', 'rpg-button rpg-button-muted settings-back')
   private activeTab: TabName = 'Graphics'
+  private lastLanguage = gameSettings.get().language
+  private lastKeyBindings = gameSettings.get().keyBindings
+  private lastFullscreen = gameSettings.get().fullscreen
 
   constructor(private readonly onBack: () => void, private readonly onLogout: () => void) {
     const tabNames: TabName[] = ['Graphics', 'Audio', 'Controls', 'Gameplay', 'Language', 'Account']
@@ -154,7 +157,18 @@ export class SettingsMenu {
       gameSettings.set('fullscreen', Boolean(document.fullscreenElement))
     })
 
-    gameSettings.subscribe(() => this.render())
+    gameSettings.subscribe((settings) => {
+      const shouldRender = settings.language !== this.lastLanguage
+        || settings.keyBindings !== this.lastKeyBindings
+        || settings.fullscreen !== this.lastFullscreen
+
+      this.lastLanguage = settings.language
+      this.lastKeyBindings = settings.keyBindings
+      this.lastFullscreen = settings.fullscreen
+      if (shouldRender) this.render()
+    }, false)
+
+    this.render()
   }
 
   private render(): void {
@@ -209,14 +223,12 @@ export class SettingsMenu {
     }
 
     if (this.activeTab === 'Controls') {
-      const preset = this.selectField(copy.keyBindings, 'keybindings', ['Default', 'Left Handed', 'Custom'], settings.keyBindings, (value) => {
-        gameSettings.set('keyBindings', value as KeyBindingPreset)
-      })
-
       this.content.append(
         this.rangeField(copy.mouseSensitivity, 'mouse', settings.mouseSensitivity, (value) => gameSettings.set('mouseSensitivity', value)),
         this.toggle(copy.invertMouse, settings.invertMouse, (checked) => gameSettings.set('invertMouse', checked)),
-        preset,
+        this.selectField(copy.keyBindings, 'keybindings', ['Default', 'Left Handed', 'Custom'], settings.keyBindings, (value) => {
+          gameSettings.set('keyBindings', value as KeyBindingPreset)
+        }),
       )
 
       if (settings.keyBindings === 'Custom') {
@@ -299,7 +311,7 @@ export class SettingsMenu {
     labelText: string,
     name: string,
     value: number,
-    onInput: (value: number) => void,
+    onChange: (value: number) => void,
   ): HTMLLabelElement {
     const control = this.range(name, value)
     const output = createElement('output', 'settings-range-value', `${value}%`)
@@ -311,8 +323,8 @@ export class SettingsMenu {
       const nextValue = Number(control.value)
       output.value = `${nextValue}%`
       output.textContent = `${nextValue}%`
-      onInput(nextValue)
     })
+    control.addEventListener('change', () => onChange(Number(control.value)))
 
     label.append(heading, control)
     return label
@@ -335,6 +347,7 @@ export class SettingsMenu {
         event.preventDefault()
         event.stopImmediatePropagation()
         button.classList.remove('listening')
+        button.textContent = displayKeyCode(event.code)
         onCaptured(event.code)
       }
 
