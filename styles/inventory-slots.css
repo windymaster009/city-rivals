@@ -1,0 +1,108 @@
+.inventory-panel {
+  width: min(280px, calc(100vw - 28px));
+  min-height: 182px;
+}
+
+.inventory-items {
+  margin-top: 9px;
+}
+
+.fixed-inventory {
+  display: grid;
+  gap: 9px;
+}
+
+.inventory-capacity-copy {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 9px;
+  min-height: 27px;
+}
+
+.inventory-capacity-copy span {
+  color: #a9b6ca;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.inventory-capacity-copy strong {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.08);
+  color: #a5f3fc;
+  font-size: 8px;
+  letter-spacing: 0.03em;
+}
+
+.inventory-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.inventory-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.inventory-slot.empty {
+  border: 1px dashed rgba(148, 163, 184, 0.28);
+  background: rgba(148, 163, 184, 0.035);
+}
+
+.inventory-slot.filled {
+  border: 1px solid rgba(34, 211, 238, 0.34);
+  background:
+    radial-gradient(circle at 50% 35%, rgba(34, 211, 238, 0.15), transparent 65%),
+    rgba(15, 23, 42, 0.82);
+  box-shadow:
+    inset 0 0 14px rgba(34, 211, 238, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.16);
+}
+
+.inventory-slot.filled:hover {
+  transform: translateY(-2px) scale(1.04);
+  border-color: rgba(34, 211, 238, 0.72);
+}
+
+.inventory-slot-icon {
+  display: block;
+  font-size: clamp(15px, 1.5vw, 20px);
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35));
+}
+
+.inventory-slot-quantity {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  min-width: 17px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: #fbbf24;
+  color: #221204;
+  font-size: 7px;
+  line-height: 1;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.28);
+}
+
+.inventory-empty-plus {
+  color: rgba(148, 163, 184, 0.22);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .inventory-panel {
+    width: min(260px, calc(100vw - 24px));
+  }
+}
