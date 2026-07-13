@@ -14,6 +14,7 @@ interface Contributor {
   contribution: string
   links: CreditLink[]
   featured?: boolean
+  founder?: boolean
 }
 
 /**
@@ -21,6 +22,113 @@ interface Contributor {
  */
 const CONTRIBUTORS: Contributor[] = [
   {
+    name: 'Windy',
+    initials: 'WK',
+    role: 'Creator & Lead Developer',
+    contribution:
+      'Original game concept, Cambodian board-game research, game design, Three.js development, and project direction.',
+    featured: true,
+    founder: true,
+    links: [
+      {
+        label: 'GitHub',
+        handle: '@windymaster009',
+        url: 'https://github.com/windymaster009',
+      },
+    ],
+  },
+   {
+    name: 'MEAS PUTTIVIREAK',
+    initials: 'MP',
+    role: 'Creator & Developer',
+    contribution:
+      'game concept, Cambodian board-game research, game design, node.js development.',
+    featured: true,
+    founder: true,
+    links: [
+      {
+        label: 'GitHub',
+        handle: '@MEROW-git',
+        url: 'https://github.com/MEROW-git',
+      },
+    ],
+  },
+   {
+    name: 'Windy',
+    initials: 'WK',
+    role: 'Creator & Lead Developer',
+    contribution:
+      'Original game concept, Cambodian board-game research, game design, Three.js development, and project direction.',
+    featured: true,
+    links: [
+      {
+        label: 'GitHub',
+        handle: '@windymaster009',
+        url: 'https://github.com/windymaster009',
+      },
+    ],
+  },
+   {
+    name: 'Windy',
+    initials: 'WK',
+    role: 'Creator & Lead Developer',
+    contribution:
+      'Original game concept, Cambodian board-game research, game design, Three.js development, and project direction.',
+    featured: true,
+    links: [
+      {
+        label: 'GitHub',
+        handle: '@windymaster009',
+        url: 'https://github.com/windymaster009',
+      },
+    ],
+  },
+  {
+    name: 'Windy',
+    initials: 'WK',
+    role: 'Creator & Lead Developer',
+    contribution:
+      'Original game concept, Cambodian board-game research, game design, Three.js development, and project direction.',
+    featured: true,
+    links: [
+      {
+        label: 'GitHub',
+        handle: '@windymaster009',
+        url: 'https://github.com/windymaster009',
+      },
+    ],
+  },
+   {
+    name: 'Windy',
+    initials: 'WK',
+    role: 'Creator & Lead Developer',
+    contribution:
+      'Original game concept, Cambodian board-game research, game design, Three.js development, and project direction.',
+    featured: true,
+    links: [
+      {
+        label: 'GitHub',
+        handle: '@windymaster009',
+        url: 'https://github.com/windymaster009',
+      },
+    ],
+  },
+   {
+    name: 'Windy',
+    initials: 'WK',
+    role: 'Creator & Lead Developer',
+    contribution:
+      'Original game concept, Cambodian board-game research, game design, Three.js development, and project direction.',
+    featured: true,
+    links: [
+      {
+        label: 'GitHub',
+        handle: '@windymaster009',
+        url: 'https://github.com/windymaster009',
+      },
+    ],
+  },
+   {
     name: 'Windy',
     initials: 'WK',
     role: 'Creator & Lead Developer',
@@ -91,6 +199,10 @@ export class CreditsMenu {
 
     const header = createElement('div', 'credit-card-header')
     header.append(avatar, identity)
+
+    if (contributor.founder) {
+      card.append(createElement('span', 'credit-founder-badge', 'Founder'))
+    }
 
     const contribution = createElement('p', 'credit-contribution', contributor.contribution)
     const links = createElement('div', 'credit-links')
