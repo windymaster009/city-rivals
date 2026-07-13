@@ -9,6 +9,7 @@ import {
   pickUniqueCharacterModels,
 } from './game/Character'
 import { CameraController } from './game/CameraController'
+import { getMappedRuleCount, resolveBoardTile } from './game/boardRules'
 import type { PlayerState } from './game/types'
 
 type CameraView = 'board' | 'follow'
@@ -57,7 +58,11 @@ scene.background = new THREE.Color(0x070b16)
 scene.fog = new THREE.Fog(0x070b16, 30, 62)
 
 const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100)
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,
+  powerPreference: 'high-performance',
+})
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.shadowMap.enabled = true
@@ -102,8 +107,8 @@ let cameraView: CameraView = 'follow'
 let gameStarted = false
 let gameOver = false
 let logEntries: string[] = []
-const clock = new THREE.Clock()
 let simulatedPing = 46
+const clock = new THREE.Clock()
 
 function escapeHtml(value: string): string {
   return value
@@ -182,7 +187,9 @@ function disposePlayerModel(player: PlayerState): void {
 
 function addLog(message: string): void {
   logEntries = [escapeHtml(message), ...logEntries].slice(0, 7)
-  eventLog.innerHTML = logEntries.map((entry) => `<div class="log-entry">${entry}</div>`).join('')
+  eventLog.innerHTML = logEntries
+    .map((entry) => `<div class="log-entry">${entry}</div>`)
+    .join('')
 }
 
 function updatePrivateInventory(): void {
@@ -197,7 +204,7 @@ function updatePrivateInventory(): void {
 
   if (player.inventory.length === 0) {
     inventoryItems.innerHTML = `
-      <div class="inventory-empty">No items yet. The real tile rewards will be mapped next.</div>
+      <div class="inventory-empty">No items yet. Land on an item tile to collect protection.</div>
       <div class="inventory-slots" aria-label="Empty inventory slots">
         ${Array.from({ length: 6 }, () => '<span></span>').join('')}
       </div>
@@ -224,6 +231,7 @@ function updateHud(): void {
   playerStatus.innerHTML = players.map((player, index) => {
     const isActive = gameStarted && index === activePlayerIndex && !gameOver && !player.eliminated
     const healthPercent = (player.hearts / player.maxHearts) * 100
+
     return `
       <article class="player-card ${isActive ? 'active' : ''} ${player.eliminated ? 'dead' : ''}" style="--accent:${hexColor(player.accent)}">
         <div class="avatar">${escapeHtml(player.name.slice(0, 1).toUpperCase())}</div>
@@ -277,12 +285,14 @@ function startTurn(): void {
   addLog(`⚡ ${activePlayer().name}'s turn started`)
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, ms))
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 }
 
 function easeInOutCubic(value: number): number {
-  return value < 0.5 ? 4 * value * value * value : 1 - Math.pow(-2 * value + 2, 3) / 2
+  return value < 0.5
+    ? 4 * value * value * value
+    : 1 - Math.pow(-2 * value + 2, 3) / 2
 }
 
 async function jumpToTile(player: PlayerState, destinationTile: BoardTile): Promise<void> {
@@ -370,11 +380,20 @@ function checkForWinner(): boolean {
   return true
 }
 
-function resolvePlaceholderTile(player: PlayerState): void {
+function resolveCurrentTile(player: PlayerState): void {
   if (player.tileIndex < 0) return
 
-  const tile = tiles[player.tileIndex]
-  addLog(`📍 ${player.name} landed on ${tile.name} — rule not mapped yet`)
+  const tileNumber = player.tileIndex + 1
+  const resolution = resolveBoardTile(player, tileNumber)
+
+  addLog(resolution.logMessage)
+  fantasyUi.showNotification({
+    title: `Tile ${tileNumber} — ${resolution.name}`,
+    message: resolution.message,
+    type: resolution.tone,
+    duration: resolution.mapped ? 4400 : 2600,
+  })
+
   synchronizeLifeState(player)
   checkForWinner()
 }
@@ -432,7 +451,7 @@ async function rollTwoDice(): Promise<void> {
     cameraController.setBoardView()
   }
 
-  resolvePlaceholderTile(player)
+  resolveCurrentTile(player)
   updateHud()
 
   if (gameOver) {
@@ -478,7 +497,6 @@ async function startNewGame(names: string[], startingMoney: number): Promise<voi
   players = []
 
   const characterAssignments = pickUniqueCharacterModels(names.length)
-
   players = await Promise.all(
     names.map(async (name, seatIndex) => {
       const accent = PLAYER_COLORS[seatIndex]
@@ -525,7 +543,7 @@ async function startNewGame(names: string[], startingMoney: number): Promise<voi
     addLog(`🧍 ${player.name} received ${characterName}`)
   })
   addLog('🏁 START is outside the grid; Tile 63 loops directly to Tile 1')
-  addLog('🧩 All 63 special tiles are placeholders for now')
+  addLog(`🧩 ${getMappedRuleCount()} board tile rules are active`)
   startTurn()
 }
 
@@ -570,14 +588,10 @@ setupForm.addEventListener('submit', async (event) => {
 })
 
 playerCountSelect.addEventListener('change', renderPlayerNameFields)
-
-rollButton.addEventListener('click', () => {
-  void rollTwoDice()
-})
+rollButton.addEventListener('click', () => void rollTwoDice())
 
 cameraButton.addEventListener('click', () => {
   if (!gameStarted || players.length === 0) return
-
   cameraView = cameraView === 'follow' ? 'board' : 'follow'
   applyCameraView()
 })
@@ -590,15 +604,27 @@ fantasyUi.on('playOnline', () => {
 })
 
 fantasyUi.on('createRoom', (settings) => {
-  fantasyUi.showChatMessage({ player: 'System', message: `${settings.roomName} was created.`, tone: 'system' })
+  fantasyUi.showChatMessage({
+    player: 'System',
+    message: `${settings.roomName} was created.`,
+    tone: 'system',
+  })
 })
 
 fantasyUi.on('joinRoom', () => {
-  fantasyUi.showNotification({ title: 'Joined Lobby', message: 'Waiting for the host to start.', type: 'success' })
+  fantasyUi.showNotification({
+    title: 'Joined Lobby',
+    message: 'Waiting for the host to start.',
+    type: 'success',
+  })
 })
 
 fantasyUi.on('refreshRooms', () => {
-  fantasyUi.showNotification({ title: 'Rooms Refreshed', message: 'Latest room list received.', type: 'info' })
+  fantasyUi.showNotification({
+    title: 'Rooms Refreshed',
+    message: 'Latest room list received.',
+    type: 'info',
+  })
 })
 
 fantasyUi.on('invite', () => {
@@ -611,12 +637,14 @@ fantasyUi.on('startGame', () => {
 })
 
 fantasyUi.on('leaveLobby', () => {
-  fantasyUi.showNotification({ title: 'Left Lobby', message: 'Returned to the main menu.', type: 'warning' })
+  fantasyUi.showNotification({
+    title: 'Left Lobby',
+    message: 'Returned to the main menu.',
+    type: 'warning',
+  })
 })
 
-fantasyUi.on('resume', () => {
-  fantasyUi.hideMainMenu()
-})
+fantasyUi.on('resume', () => fantasyUi.hideMainMenu())
 
 fantasyUi.on('leaveMatch', () => {
   fantasyUi.showMainMenu()
@@ -624,11 +652,18 @@ fantasyUi.on('leaveMatch', () => {
 })
 
 fantasyUi.on('quit', () => {
-  fantasyUi.showDialog('Exit Game', 'Browser games cannot close the tab automatically. Return to your desktop from the browser.')
+  fantasyUi.showDialog(
+    'Exit Game',
+    'Browser games cannot close the tab automatically. Return to your desktop from the browser.',
+  )
 })
 
 fantasyUi.on('logout', () => {
-  fantasyUi.showNotification({ title: 'Logged Out', message: 'Guest account session cleared.', type: 'warning' })
+  fantasyUi.showNotification({
+    title: 'Logged Out',
+    message: 'Guest account session cleared.',
+    type: 'warning',
+  })
 })
 
 window.addEventListener('keydown', (event) => {
@@ -639,7 +674,10 @@ window.addEventListener('keydown', (event) => {
 })
 
 window.setInterval(() => {
-  simulatedPing = Math.max(24, Math.min(188, simulatedPing + Math.round((Math.random() - 0.45) * 18)))
+  simulatedPing = Math.max(
+    24,
+    Math.min(188, simulatedPing + Math.round((Math.random() - 0.45) * 18)),
+  )
   fantasyUi.updatePing(simulatedPing)
 }, 1800)
 
