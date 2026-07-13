@@ -1,0 +1,82 @@
+.dice-physics-overlay {
+  position: absolute;
+  z-index: 15;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(34, 211, 238, 0.12), rgba(2, 6, 18, 0.48) 44%, rgba(2, 6, 18, 0.08) 72%);
+  backdrop-filter: blur(1.5px);
+  transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.dice-physics-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.dice-physics-stage {
+  position: relative;
+  width: min(720px, 84vw);
+  height: min(430px, 56vh);
+  overflow: hidden;
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(15, 23, 42, 0.34), rgba(2, 6, 18, 0.72)),
+    linear-gradient(145deg, rgba(8, 15, 32, 0.48), rgba(3, 8, 22, 0.18));
+  box-shadow:
+    0 32px 100px rgba(0, 0, 0, 0.56),
+    inset 0 0 54px rgba(34, 211, 238, 0.05),
+    0 0 60px rgba(34, 211, 238, 0.08);
+}
+
+.dice-physics-stage canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.dice-physics-label {
+  position: absolute;
+  left: 50%;
+  bottom: max(12vh, 92px);
+  transform: translateX(-50%) translateY(8px);
+  min-width: 170px;
+  padding: 10px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  background: rgba(7, 12, 25, 0.82);
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.32);
+  color: #e0f2fe;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+}
+
+.dice-physics-overlay.result .dice-physics-label {
+  color: #fde68a;
+  border-color: rgba(251, 191, 36, 0.32);
+  box-shadow:
+    0 16px 45px rgba(0, 0, 0, 0.32),
+    0 0 36px rgba(251, 191, 36, 0.12);
+}
+
+@media (max-width: 720px) {
+  .dice-physics-stage {
+    width: 92vw;
+    height: min(390px, 52vh);
+    border-radius: 21px;
+  }
+
+  .dice-physics-label {
+    bottom: max(14vh, 78px);
+    font-size: 11px;
+  }
+}
