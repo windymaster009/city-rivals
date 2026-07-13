@@ -1,0 +1,104 @@
+.settings-range-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-range-value {
+  min-width: 48px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(101, 66, 46, 0.14);
+  color: var(--rpg-purple);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.settings-key-field {
+  grid-template-columns: minmax(160px, 1fr) auto;
+  align-items: center;
+}
+
+.settings-key-field .rpg-button {
+  min-width: 150px;
+}
+
+.settings-key-field .rpg-button.listening {
+  animation: settings-key-pulse 900ms ease-in-out infinite alternate;
+}
+
+@keyframes settings-key-pulse {
+  from { filter: brightness(1); transform: scale(1); }
+  to { filter: brightness(1.18); transform: scale(1.035); }
+}
+
+#game-canvas {
+  cursor: grab;
+}
+
+#game-canvas.camera-dragging {
+  cursor: grabbing;
+}
+
+.game-crosshair {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.8);
+  transition: opacity 160ms ease, transform 160ms ease;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7));
+}
+
+.game-crosshair.visible {
+  opacity: 0.9;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.game-crosshair::before,
+.game-crosshair::after,
+.game-crosshair span,
+.game-crosshair i {
+  content: "";
+  position: absolute;
+  display: block;
+  background: rgba(255, 247, 204, 0.95);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.7);
+}
+
+.game-crosshair::before,
+.game-crosshair::after {
+  left: 13px;
+  width: 2px;
+  height: 8px;
+}
+
+.game-crosshair::before { top: 0; }
+.game-crosshair::after { bottom: 0; }
+
+.game-crosshair span,
+.game-crosshair i {
+  top: 13px;
+  width: 8px;
+  height: 2px;
+}
+
+.game-crosshair span { left: 0; }
+.game-crosshair i { right: 0; }
+
+@media (max-width: 560px) {
+  .settings-key-field {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-key-field .rpg-button {
+    width: 100%;
+  }
+}
