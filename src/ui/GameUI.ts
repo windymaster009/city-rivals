@@ -99,7 +99,7 @@ export class GameUI {
     this.mount.append(this.root)
 
     this.notifications = new NotificationCenter(this.root)
-    this.dialog = new Dialog(this.root)
+    this.dialog = new Dialog(this.mount)
     this.joinRoomMenu.updateRooms(DEMO_ROOMS, (roomId) => this.handleJoinRoom(roomId))
     this.lobbyMenu.updatePlayers(DEMO_PLAYERS, 4)
     this.lobbyMenu.addChatMessage({ player: 'System', message: 'Welcome to the lobby.', tone: 'system' })
@@ -170,6 +170,14 @@ export class GameUI {
 
   showDialog(title: string, body: string): void {
     this.dialog.show(title, body)
+  }
+
+  choose<T extends string>(
+    title: string,
+    body: string,
+    choices: ReadonlyArray<{ value: T; label: string; className: string }>,
+  ): Promise<T> {
+    return this.dialog.choose(title, body, choices)
   }
 
   private registerView(name: MenuView, element: HTMLElement): void {

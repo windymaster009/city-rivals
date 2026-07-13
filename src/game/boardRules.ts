@@ -14,11 +14,18 @@ export interface TileResolution {
 type ItemId =
   | 'monk'
   | 'flashlight'
-  | 'key'
+  | 'jail-key'
   | 'pill'
   | 'rope'
   | 'fire-truck'
   | 'treasure-key'
+  | 'thunder-umbrella'
+  | 'bulletproof-vest'
+  | 'parachute'
+  | 'gun'
+  | 'boat'
+  | 'energy-shield-boots'
+  | 'skip-card'
 
 type BoardRule =
   | {
@@ -55,9 +62,45 @@ type BoardRule =
       consumeItem: boolean
     }
   | {
+      kind: 'heal'
+      tileNumber: number
+      name: string
+      cost: number
+      hearts: number
+    }
+  | {
       kind: 'blank'
       tileNumber: number
       name: string
+    }
+  | {
+      kind: 'robbery'
+      tileNumber: number
+      name: string
+      demandedAmount: number
+      gunItemId: ItemId
+      vestItemId: ItemId
+    }
+  | {
+      kind: 'duel'
+      tileNumber: number
+      name: string
+      gunItemId: ItemId
+      vestItemId: ItemId
+      damage: number
+    }
+  | {
+      kind: 'transfer'
+      tileNumber: number
+      name: string
+      amount: number
+      recipientSeatIndex: number
+    }
+  | {
+      kind: 'money-loss'
+      tileNumber: number
+      name: string
+      amount: number
     }
 
 const TREASURE_REWARD = 100_000
@@ -84,9 +127,9 @@ const BOARD_RULES: Readonly<Partial<Record<number, BoardRule>>> = {
   3: {
     kind: 'item',
     tileNumber: 3,
-    name: 'Key',
-    itemId: 'key',
-    itemName: 'Key',
+    name: 'Jail Key',
+    itemId: 'jail-key',
+    itemName: 'Jail Key',
     cost: 0,
     maxQuantity: 2,
   },
@@ -132,65 +175,277 @@ const BOARD_RULES: Readonly<Partial<Record<number, BoardRule>>> = {
     damage: 1,
     consumeItem: true,
   },
-  11: {
+
+  9: {
     kind: 'item',
-    tileNumber: 11,
+    tileNumber: 9,
     name: 'Treasure Key',
     itemId: 'treasure-key',
     itemName: 'Treasure Key',
     cost: 0,
     maxQuantity: 2,
   },
-  12: {
+
+  10: {
     kind: 'danger',
-    tileNumber: 12,
-    name: 'Stomach Trouble',
+    tileNumber: 10,
+    name: 'Diarrhea',
     requiredItemId: 'pill',
     requiredItemName: 'Pill',
     damage: 1,
     consumeItem: true,
   },
-  13: {
+
+  11: {
     kind: 'danger',
-    tileNumber: 13,
-    name: 'Jail',
-    requiredItemId: 'key',
-    requiredItemName: 'Key',
+    tileNumber: 11,
+    name: 'Prison Time',
+    requiredItemId: 'jail-key',
+    requiredItemName: 'Jail Key',
     damage: 1,
     consumeItem: true,
   },
-  14: {
+  12: {
     kind: 'danger',
-    tileNumber: 14,
-    name: 'House Fire',
+    tileNumber: 12,
+    name: 'House on Fire',
     requiredItemId: 'fire-truck',
     requiredItemName: 'Fire Fighter Car',
     damage: 1,
     consumeItem: true,
   },
-  15: {
+  13: {
     kind: 'blank',
-    tileNumber: 15,
-    name: 'Blank Tile',
+    tileNumber: 13,
+    name: 'Skip',
   },
-  16: {
+  14: {
     kind: 'danger',
-    tileNumber: 16,
-    name: 'Walk Down the Drain',
+    tileNumber: 14,
+    name: 'Fall Down the Drain',
     requiredItemId: 'rope',
     requiredItemName: 'Rope',
     damage: 1,
     consumeItem: true,
   },
-  17: {
+  15: {
     kind: 'treasure',
-    tileNumber: 17,
-    name: 'Treasure',
+    tileNumber: 15,
+    name: 'Found Treasure',
     requiredItemId: 'treasure-key',
     requiredItemName: 'Treasure Key',
     amount: TREASURE_REWARD,
     consumeItem: true,
   },
+  16: {
+    kind: 'heal',
+    tileNumber: 16,
+    name: 'Heart Recovery',
+    cost: 20_000,
+    hearts: 2,
+  },
+  17: {
+    kind: 'item',
+    tileNumber: 17,
+    name: 'Thunder Umbrella',
+    itemId: 'thunder-umbrella',
+    itemName: 'Thunder Umbrella',
+    cost: 500,
+    maxQuantity: 1,
+  },
+  18: {
+    kind: 'robbery',
+    tileNumber: 18,
+    name: 'Armed Robbery',
+    demandedAmount: 100_000,
+    gunItemId: 'gun',
+    vestItemId: 'bulletproof-vest',
+  },
+  19: {
+    kind: 'money',
+    tileNumber: 19,
+    name: 'Lottery Win',
+    amount: 100_000,
+  },
+  20: {
+    kind: 'item',
+    tileNumber: 20,
+    name: 'Parachute',
+    itemId: 'parachute',
+    itemName: 'Parachute',
+    cost: 1_000,
+    maxQuantity: 1,
+  },
+  21: {
+    kind: 'item',
+    tileNumber: 21,
+    name: 'Gun',
+    itemId: 'gun',
+    itemName: 'Gun',
+    cost: 900,
+    maxQuantity: 1,
+  },
+  22: {
+    kind: 'item',
+    tileNumber: 22,
+    name: 'Boat',
+    itemId: 'boat',
+    itemName: 'Boat',
+    cost: 5_000,
+    maxQuantity: 1,
+  },
+  23: {
+    kind: 'duel',
+    tileNumber: 23,
+    name: 'Duel',
+    gunItemId: 'gun',
+    vestItemId: 'bulletproof-vest',
+    damage: 1,
+  },
+  24: {
+    kind: 'transfer',
+    tileNumber: 24,
+    name: 'Accidental Transfer',
+    amount: 2_000,
+    recipientSeatIndex: 1,
+  },
+  25: {
+    kind: 'danger',
+    tileNumber: 25,
+    name: 'Landmine',
+    requiredItemId: 'energy-shield-boots',
+    requiredItemName: 'Energy Shield Boots',
+    damage: 1,
+    consumeItem: true,
+  },
+  26: {
+    kind: 'item',
+    tileNumber: 26,
+    name: 'Boat',
+    itemId: 'boat',
+    itemName: 'Boat',
+    cost: 5_000,
+    maxQuantity: 1,
+  },
+  27: {
+    kind: 'money-loss',
+    tileNumber: 27,
+    name: 'Lost Money',
+    amount: 500,
+  },
+  28: {
+    kind: 'item',
+    tileNumber: 28,
+    name: 'Thunder Umbrella',
+    itemId: 'thunder-umbrella',
+    itemName: 'Thunder Umbrella',
+    cost: 500,
+    maxQuantity: 1,
+  },
+  29: {
+    kind: 'danger',
+    tileNumber: 29,
+    name: 'Struck by Lightning',
+    requiredItemId: 'thunder-umbrella',
+    requiredItemName: 'Thunder Umbrella',
+    damage: 1,
+    consumeItem: true,
+  },
+  30: {
+    kind: 'item',
+    tileNumber: 30,
+    name: 'Skip Card',
+    itemId: 'skip-card',
+    itemName: 'Skip Card',
+    cost: 0,
+    maxQuantity: 1,
+  },
+  31: {
+    kind: 'money-loss',
+    tileNumber: 31,
+    name: 'Lost Lottery',
+    amount: 900_000,
+  },
+  32: {
+    kind: 'item',
+    tileNumber: 32,
+    name: 'Bulletproof Vest',
+    itemId: 'bulletproof-vest',
+    itemName: 'Bulletproof Vest',
+    cost: 500,
+    maxQuantity: 1,
+  },
+  33: {
+    kind: 'danger',
+    tileNumber: 33,
+    name: 'Plane Crash',
+    requiredItemId: 'parachute',
+    requiredItemName: 'Parachute',
+    damage: 1,
+    consumeItem: true,
+  },
+  34: {
+    kind: 'money',
+    tileNumber: 34,
+    name: 'Tournament Win',
+    amount: 5_000,
+  },
+  35: {
+    kind: 'item',
+    tileNumber: 35,
+    name: 'Energy Shield Boots',
+    itemId: 'energy-shield-boots',
+    itemName: 'Energy Shield Boots',
+    cost: 3_000,
+    maxQuantity: 1,
+  },
+  36: {
+    kind: 'danger',
+    tileNumber: 36,
+    name: 'Fall Down the Drain',
+    requiredItemId: 'rope',
+    requiredItemName: 'Rope',
+    damage: 1,
+    consumeItem: true,
+  },
+  37: {
+    kind: 'money-loss',
+    tileNumber: 37,
+    name: 'Lost Money',
+    amount: 300,
+  },
+  38: {
+    kind: 'heal',
+    tileNumber: 38,
+    name: 'Heart Recovery',
+    cost: 30_000,
+    hearts: 3,
+  },
+  39: {
+    kind: 'danger',
+    tileNumber: 39,
+    name: 'Prison Time',
+    requiredItemId: 'jail-key',
+    requiredItemName: 'Jail Key',
+    damage: 1,
+    consumeItem: true,
+  },
+}
+
+export type BoardTileDecision = 'pay' | 'refuse'
+
+export interface BoardTileChoice {
+  title: string
+  message: string
+  options: ReadonlyArray<{
+    value: BoardTileDecision
+    label: string
+    className: string
+  }>
+}
+
+export interface BoardRuleContext {
+  players: readonly PlayerState[]
 }
 
 function formatMoney(value: number): string {
@@ -332,7 +587,206 @@ function resolveTreasureRule(player: PlayerState, rule: Extract<BoardRule, { kin
   }
 }
 
-export function resolveBoardTile(player: PlayerState, tileNumber: number): TileResolution {
+function resolveHealRule(player: PlayerState, rule: Extract<BoardRule, { kind: 'heal' }>): TileResolution {
+  if (player.hearts >= player.maxHearts) {
+    return {
+      tileNumber: rule.tileNumber,
+      name: rule.name,
+      message: 'Your hearts are already full.',
+      logMessage: `${player.name} found ${rule.name}, but already had full hearts`,
+      tone: 'info',
+      mapped: true,
+    }
+  }
+
+  if (rule.cost > player.money) {
+    return {
+      tileNumber: rule.tileNumber,
+      name: rule.name,
+      message: `${rule.name} costs ${formatMoney(rule.cost)}, but you only have ${formatMoney(player.money)}.`,
+      logMessage: `${player.name} could not afford ${rule.name}`,
+      tone: 'warning',
+      mapped: true,
+    }
+  }
+
+  player.money -= rule.cost
+  const previousHearts = player.hearts
+  player.hearts = Math.min(player.maxHearts, player.hearts + rule.hearts)
+  const healed = player.hearts - previousHearts
+
+  return {
+    tileNumber: rule.tileNumber,
+    name: rule.name,
+    message: `Paid ${formatMoney(rule.cost)} and recovered ${healed} heart${healed === 1 ? '' : 's'}.`,
+    logMessage: `${player.name} paid ${formatMoney(rule.cost)} and recovered ${healed} heart${healed === 1 ? '' : 's'}`,
+    tone: 'success',
+    mapped: true,
+  }
+}
+
+function resolveRobberyRule(
+  player: PlayerState,
+  rule: Extract<BoardRule, { kind: 'robbery' }>,
+  decision?: BoardTileDecision,
+): TileResolution {
+  const canPay = player.money >= rule.demandedAmount
+
+  if (canPay && decision === 'pay') {
+    player.money = Math.max(0, player.money - rule.demandedAmount)
+    return {
+      tileNumber: rule.tileNumber,
+      name: rule.name,
+      message: `You paid the robber ${formatMoney(rule.demandedAmount)} and survived.`,
+      logMessage: `${player.name} paid the robber ${formatMoney(rule.demandedAmount)} and survived`,
+      tone: 'warning',
+      mapped: true,
+    }
+  }
+
+  if (consumeInventoryItem(player, rule.gunItemId)) {
+    return {
+      tileNumber: rule.tileNumber,
+      name: rule.name,
+      message: `You used your Gun to stop the robber. Your money is safe, but the Gun is gone.`,
+      logMessage: `${player.name} used a Gun to stop the robber and kept all their money`,
+      tone: 'success',
+      mapped: true,
+    }
+  }
+
+  if (findInventoryItem(player, rule.vestItemId)?.quantity) {
+    consumeInventoryItem(player, rule.vestItemId)
+    if (canPay) player.money = Math.max(0, player.money - rule.demandedAmount)
+
+    return {
+      tileNumber: rule.tileNumber,
+      name: rule.name,
+      message: canPay
+        ? `Your Bulletproof Vest stopped the shot and was consumed. The robber still took ${formatMoney(rule.demandedAmount)}.`
+        : `Your Bulletproof Vest stopped the shot and was consumed. Your money is unchanged.`,
+      logMessage: canPay
+        ? `${player.name}'s Bulletproof Vest stopped the shot, but the robber took ${formatMoney(rule.demandedAmount)}`
+        : `${player.name}'s Bulletproof Vest stopped the robber's shot`,
+      tone: canPay ? 'warning' : 'success',
+      mapped: true,
+    }
+  }
+
+  player.hearts = Math.max(0, player.hearts - 1)
+  if (!canPay) player.money = 0
+
+  return {
+    tileNumber: rule.tileNumber,
+    name: rule.name,
+    message: canPay
+      ? `You refused to pay and were shot. You lost 1 life, but your money is unchanged.`
+      : `You could not pay and were shot. You lost 1 life and your money is now $0.`,
+    logMessage: `${player.name} had no protection and lost 1 life during ${rule.name}`,
+    tone: player.hearts === 0 ? 'danger' : 'warning',
+    mapped: true,
+  }
+}
+
+function resolveDuelRule(player: PlayerState, rule: Extract<BoardRule, { kind: 'duel' }>): TileResolution {
+  const hasGun = Boolean(findInventoryItem(player, rule.gunItemId)?.quantity)
+  const hasVest = Boolean(findInventoryItem(player, rule.vestItemId)?.quantity)
+
+  if (hasGun) consumeInventoryItem(player, rule.gunItemId)
+  if (hasVest) consumeInventoryItem(player, rule.vestItemId)
+
+  if (hasGun && hasVest) {
+    return {
+      tileNumber: rule.tileNumber,
+      name: rule.name,
+      message: 'Your Gun and Bulletproof Vest protected you in the duel. Both items were consumed.',
+      logMessage: `${player.name} used a Gun and Bulletproof Vest to survive the duel without losing a life`,
+      tone: 'success',
+      mapped: true,
+    }
+  }
+
+  player.hearts = Math.max(0, player.hearts - rule.damage)
+  const lostItem = hasGun ? 'Gun' : hasVest ? 'Bulletproof Vest' : null
+
+  return {
+    tileNumber: rule.tileNumber,
+    name: rule.name,
+    message: lostItem
+      ? `A ${lostItem} alone was not enough. It was consumed and you lost ${rule.damage} life.`
+      : `You had no Gun or Bulletproof Vest and lost ${rule.damage} life.`,
+    logMessage: `${player.name} lacked both duel items and lost ${rule.damage} life`,
+    tone: player.hearts === 0 ? 'danger' : 'warning',
+    mapped: true,
+  }
+}
+
+function resolveTransferRule(
+  player: PlayerState,
+  rule: Extract<BoardRule, { kind: 'transfer' }>,
+  context?: BoardRuleContext,
+): TileResolution {
+  const recipient = context?.players.find((candidate) => candidate.seatIndex === rule.recipientSeatIndex)
+
+  if (!recipient || recipient.id === player.id) {
+    return {
+      tileNumber: rule.tileNumber,
+      name: rule.name,
+      message: recipient ? 'You are Player 2, so no money was transferred.' : 'Player 2 is not in this match.',
+      logMessage: `${player.name} landed on ${rule.name}, but no transfer was needed`,
+      tone: 'info',
+      mapped: true,
+    }
+  }
+
+  const transferredAmount = Math.min(player.money, rule.amount)
+  player.money = Math.max(0, player.money - transferredAmount)
+  recipient.money += transferredAmount
+
+  return {
+    tileNumber: rule.tileNumber,
+    name: rule.name,
+    message: `You accidentally sent ${formatMoney(transferredAmount)} to ${recipient.name}.`,
+    logMessage: `${player.name} accidentally sent ${formatMoney(transferredAmount)} to ${recipient.name}`,
+    tone: 'warning',
+    mapped: true,
+  }
+}
+
+function resolveMoneyLossRule(player: PlayerState, rule: Extract<BoardRule, { kind: 'money-loss' }>): TileResolution {
+  const lostAmount = Math.min(player.money, rule.amount)
+  player.money = Math.max(0, player.money - rule.amount)
+
+  return {
+    tileNumber: rule.tileNumber,
+    name: rule.name,
+    message: `You lost ${formatMoney(lostAmount)}.`,
+    logMessage: `${player.name} lost ${formatMoney(lostAmount)} on ${rule.name}`,
+    tone: 'warning',
+    mapped: true,
+  }
+}
+
+export function getBoardTileChoice(player: PlayerState, tileNumber: number): BoardTileChoice | null {
+  const rule = BOARD_RULES[tileNumber]
+  if (rule?.kind !== 'robbery' || player.money < rule.demandedAmount) return null
+
+  return {
+    title: rule.name,
+    message: `The robber demands ${formatMoney(rule.demandedAmount)}. Pay or refuse and defend yourself?`,
+    options: [
+      { value: 'pay', label: `Pay ${formatMoney(rule.demandedAmount)}`, className: 'rpg-button-orange' },
+      { value: 'refuse', label: 'Refuse', className: 'rpg-button-red' },
+    ],
+  }
+}
+
+export function resolveBoardTile(
+  player: PlayerState,
+  tileNumber: number,
+  decision?: BoardTileDecision,
+  context?: BoardRuleContext,
+): TileResolution {
   const rule = BOARD_RULES[tileNumber]
 
   if (!rule) {
@@ -355,6 +809,16 @@ export function resolveBoardTile(player: PlayerState, tileNumber: number): TileR
       return resolveDangerRule(player, rule)
     case 'treasure':
       return resolveTreasureRule(player, rule)
+    case 'heal':
+      return resolveHealRule(player, rule)
+    case 'robbery':
+      return resolveRobberyRule(player, rule, decision)
+    case 'duel':
+      return resolveDuelRule(player, rule)
+    case 'transfer':
+      return resolveTransferRule(player, rule, context)
+    case 'money-loss':
+      return resolveMoneyLossRule(player, rule)
     case 'blank':
       return {
         tileNumber,

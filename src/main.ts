@@ -9,7 +9,7 @@ import {
   pickUniqueCharacterModels,
 } from './game/Character'
 import { CameraController } from './game/CameraController'
-import { getMappedRuleCount, resolveBoardTile } from './game/boardRules'
+import { getBoardTileChoice, getMappedRuleCount, resolveBoardTile } from './game/boardRules'
 import type { PlayerState } from './game/types'
 
 type CameraView = 'board' | 'follow'
@@ -380,11 +380,15 @@ function checkForWinner(): boolean {
   return true
 }
 
-function resolveCurrentTile(player: PlayerState): void {
+async function resolveCurrentTile(player: PlayerState): Promise<void> {
   if (player.tileIndex < 0) return
 
   const tileNumber = player.tileIndex + 1
-  const resolution = resolveBoardTile(player, tileNumber)
+  const choice = getBoardTileChoice(player, tileNumber)
+  const decision = choice
+    ? await fantasyUi.choose(choice.title, choice.message, choice.options)
+    : undefined
+  const resolution = resolveBoardTile(player, tileNumber, decision, { players })
 
   addLog(resolution.logMessage)
   fantasyUi.showNotification({
@@ -451,7 +455,7 @@ async function rollTwoDice(): Promise<void> {
     cameraController.setBoardView()
   }
 
-  resolveCurrentTile(player)
+  await resolveCurrentTile(player)
   updateHud()
 
   if (gameOver) {
