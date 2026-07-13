@@ -1,3 +1,4 @@
+import { soundManager } from '../audio/SoundManager'
 import { createButton, createElement, field, input, panelShell, select } from './dom'
 
 type TabName = 'Graphics' | 'Audio' | 'Controls' | 'Gameplay' | 'Language' | 'Account'
@@ -43,11 +44,16 @@ export class SettingsMenu {
     }
 
     if (this.activeTab === 'Audio') {
+      const settings = soundManager.getSettings()
+      const testSound = createButton('Play Test Sound', 'rpg-button rpg-button-cyan rpg-button-small')
+      testSound.addEventListener('click', () => soundManager.test())
+
       this.content.append(
-        field('Master', this.range('master', 85)),
-        field('Music', this.range('music', 68)),
-        field('Effects', this.range('effects', 78)),
-        field('Voice Chat', this.range('voice', 60)),
+        this.rangeField('Master Volume', 'master', settings.master, (value) => soundManager.setMasterVolume(value)),
+        this.rangeField('Effects Volume', 'effects', settings.effects, (value) => soundManager.setEffectsVolume(value)),
+        this.toggle('Mute All Sound', settings.muted, (checked) => soundManager.setMuted(checked)),
+        createElement('p', 'settings-note', 'Sound settings are saved automatically in this browser.'),
+        testSound,
       )
     }
 
@@ -77,11 +83,42 @@ export class SettingsMenu {
     }
   }
 
-  private toggle(labelText: string, checked: boolean): HTMLLabelElement {
+  private toggle(
+    labelText: string,
+    checked: boolean,
+    onChange?: (checked: boolean) => void,
+  ): HTMLLabelElement {
     const control = input(labelText.toLowerCase().replaceAll(' ', '-'), 'checkbox')
     control.checked = checked
+    if (onChange) {
+      control.addEventListener('change', () => onChange(control.checked))
+    }
+
     const label = createElement('label', 'rpg-switch')
     label.append(createElement('span', '', labelText), control, createElement('i'))
+    return label
+  }
+
+  private rangeField(
+    labelText: string,
+    name: string,
+    value: number,
+    onInput: (value: number) => void,
+  ): HTMLLabelElement {
+    const control = this.range(name, value)
+    const output = createElement('output', 'settings-range-value', `${value}%`)
+    const label = createElement('label', 'rpg-field')
+    const heading = createElement('span', 'settings-range-heading')
+    heading.append(createElement('span', '', labelText), output)
+
+    control.addEventListener('input', () => {
+      const nextValue = Number(control.value)
+      output.value = `${nextValue}%`
+      output.textContent = `${nextValue}%`
+      onInput(nextValue)
+    })
+
+    label.append(heading, control)
     return label
   }
 
