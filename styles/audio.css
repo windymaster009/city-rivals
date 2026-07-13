@@ -1,0 +1,21 @@
+.settings-range-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-range-value {
+  min-width: 48px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(72, 42, 82, 0.12);
+  color: var(--rpg-purple);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.settings-content input[type="range"] {
+  accent-color: var(--rpg-orange);
+}
