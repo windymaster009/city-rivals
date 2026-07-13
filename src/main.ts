@@ -1,7 +1,6 @@
 import './style.css'
 import * as THREE from 'three'
 import { createGameUI } from './ui/GameUI'
-import { createBoard, START_POSITION, type BoardTile } from './game/board'
 import { createBoard, setBoardTileGlow, type BoardTile } from './game/board'
 import {
   animateCharacterIdle,
@@ -11,6 +10,8 @@ import {
 } from './game/Character'
 import { CameraController } from './game/CameraController'
 import type { PlayerState } from './game/types'
+
+type CameraView = 'board' | 'follow'
 
 function requireElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector)
@@ -97,7 +98,7 @@ const cameraController = new CameraController(camera)
 let players: PlayerState[] = []
 let activePlayerIndex = 0
 let moving = false
-let boardViewOverride = false
+let cameraView: CameraView = 'follow'
 let gameStarted = false
 let gameOver = false
 let logEntries: string[] = []
@@ -143,8 +144,7 @@ function playerOffset(player: PlayerState): THREE.Vector3 {
 }
 
 function positionPlayerAtStart(player: PlayerState): void {
-  const position = startTile.position.clone().add(playerOffset(player))
-  player.model.position.copy(position)
+  player.model.position.copy(startTile.position.clone().add(playerOffset(player)))
 }
 
 function updateBoardTileGlows(elapsed: number): void {
@@ -255,17 +255,23 @@ function resetDiceDisplay(): void {
   diceTotalValue.textContent = '–'
 }
 
-function setActiveCamera(): void {
-  if (!gameStarted || players.length === 0) return
-  boardViewOverride = false
-  cameraController.focusOn(activePlayer().model.position)
+function applyCameraView(focusTarget = true): void {
+  if (cameraView === 'board') {
+    cameraController.setBoardView()
+    cameraButton.textContent = 'Follow View'
+    return
+  }
+
   cameraButton.textContent = 'Board View'
+  if (focusTarget && gameStarted && players.length > 0) {
+    cameraController.focusOn(activePlayer().model.position)
+  }
 }
 
 function startTurn(): void {
   if (!gameStarted || gameOver) return
   updateHud()
-  setActiveCamera()
+  applyCameraView()
   rollButton.disabled = false
   resetDiceDisplay()
   addLog(`⚡ ${activePlayer().name}'s turn started`)
@@ -286,7 +292,11 @@ async function jumpToTile(player: PlayerState, destinationTile: BoardTile): Prom
   direction.y = 0
 
   cameraController.updateDirection(direction)
-  cameraController.follow(player.model, direction)
+  if (cameraView === 'follow') {
+    cameraController.follow(player.model, direction)
+  } else {
+    cameraController.setBoardView()
+  }
 
   if (direction.lengthSq() > 0.01) {
     player.model.rotation.y = Math.atan2(direction.x, direction.z)
@@ -303,15 +313,17 @@ async function jumpToTile(player: PlayerState, destinationTile: BoardTile): Prom
       player.model.position.y = Math.sin(raw * Math.PI) * 1.05
       animateJumpPose(player.model, raw)
 
-      const shadow = player.model.userData.shadow as THREE.Mesh
-      const scale = 1 - Math.sin(raw * Math.PI) * 0.35
-      shadow.scale.setScalar(scale)
+      const shadow = player.model.userData.shadow as THREE.Mesh | undefined
+      if (shadow) {
+        const scale = 1 - Math.sin(raw * Math.PI) * 0.35
+        shadow.scale.setScalar(scale)
+      }
 
       if (raw < 1) {
         requestAnimationFrame(animateStep)
       } else {
         player.model.position.copy(destination)
-        shadow.scale.setScalar(1)
+        shadow?.scale.setScalar(1)
         resolve()
       }
     }
@@ -336,7 +348,11 @@ function finishGame(winner?: PlayerState): void {
 
   if (winner) {
     turnLabel.textContent = `${winner.name} survives!`
-    cameraController.focusOn(winner.model.position)
+    if (cameraView === 'follow') {
+      cameraController.focusOn(winner.model.position)
+    } else {
+      cameraController.setBoardView()
+    }
     addLog(`🏆 ${winner.name} is the last surviving player`)
   } else {
     turnLabel.textContent = 'No survivors'
@@ -410,7 +426,12 @@ async function rollTwoDice(): Promise<void> {
     await delay(45)
   }
 
-  cameraController.focusOn(player.model.position)
+  if (cameraView === 'follow') {
+    cameraController.focusOn(player.model.position)
+  } else {
+    cameraController.setBoardView()
+  }
+
   resolvePlaceholderTile(player)
   updateHud()
 
@@ -489,7 +510,7 @@ async function startNewGame(names: string[], startingMoney: number): Promise<voi
 
   activePlayerIndex = 0
   moving = false
-  boardViewOverride = false
+  cameraView = 'follow'
   gameStarted = true
   gameOver = false
   logEntries = []
@@ -557,14 +578,8 @@ rollButton.addEventListener('click', () => {
 cameraButton.addEventListener('click', () => {
   if (!gameStarted || players.length === 0) return
 
-  boardViewOverride = !boardViewOverride
-  if (boardViewOverride) {
-    cameraController.setBoardView()
-    cameraButton.textContent = 'Follow Player'
-  } else {
-    cameraController.focusOn(activePlayer().model.position)
-    cameraButton.textContent = 'Board View'
-  }
+  cameraView = cameraView === 'follow' ? 'board' : 'follow'
+  applyCameraView()
 })
 
 newMatchButton.addEventListener('click', showSetup)
