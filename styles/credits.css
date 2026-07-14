@@ -1,0 +1,226 @@
+.credits-panel {
+  width: min(820px, calc(100vw - 36px));
+  padding-bottom: 28px;
+}
+
+.credits-heading {
+  max-width: 650px;
+  margin: 0 auto 22px;
+  text-align: center;
+}
+
+.credits-kicker {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #8a552f;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.credits-heading h2 {
+  margin: 0;
+  color: var(--rpg-purple);
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1;
+}
+
+.credits-heading p {
+  max-width: 620px;
+  margin: 12px auto 0;
+  color: #70483a;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.credits-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.credit-card {
+  position: relative;
+  min-width: 0;
+  padding: 18px;
+  border: 2px solid rgba(91, 58, 46, 0.18);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.42), rgba(255, 240, 194, 0.18)),
+    rgba(135, 78, 38, 0.08);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.52),
+    0 12px 24px rgba(74, 42, 29, 0.12);
+}
+
+.credit-card-featured {
+  border-color: rgba(177, 104, 31, 0.46);
+  background:
+    radial-gradient(circle at top right, rgba(255, 217, 112, 0.28), transparent 40%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.5), rgba(255, 227, 153, 0.2));
+}
+
+.credit-badge {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(103, 54, 33, 0.12);
+  color: #7b432d;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.credit-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.credit-avatar {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #ffd86d, #bd6d31);
+  color: var(--rpg-purple);
+  font-weight: 900;
+  box-shadow:
+    inset 0 3px rgba(255, 255, 255, 0.35),
+    0 8px 14px rgba(77, 40, 28, 0.18);
+}
+
+.credit-avatar-empty {
+  background: rgba(94, 74, 66, 0.12);
+  color: #8b6a5d;
+  box-shadow: none;
+}
+
+.credit-identity {
+  min-width: 0;
+}
+
+.credit-identity h3,
+.credit-card-future h3 {
+  margin: 0;
+  color: var(--rpg-purple);
+  font-size: 20px;
+}
+
+.credit-role {
+  display: block;
+  margin-top: 4px;
+  color: #a2532d;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.credit-contribution,
+.credit-card-future p {
+  margin: 14px 0 0;
+  color: #684639;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.credit-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.credit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(78, 45, 67, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.3);
+  color: var(--rpg-purple);
+  text-decoration: none;
+  transition: transform var(--rpg-fast), background var(--rpg-fast), box-shadow var(--rpg-fast);
+}
+
+.credit-link:hover,
+.credit-link:focus-visible {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.54);
+  box-shadow: 0 8px 16px rgba(71, 42, 34, 0.12);
+}
+
+.credit-link:focus-visible {
+  outline: 3px solid #fff2a3;
+  outline-offset: 2px;
+}
+
+.credit-link-label {
+  color: #9d6a4c;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.credit-link strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.credit-card-future {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0 14px;
+  margin-top: 14px;
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.credit-card-future p {
+  grid-column: 2;
+  margin-top: 5px;
+}
+
+.credits-back {
+  display: block;
+  min-width: 110px;
+  margin: 22px auto 0;
+}
+
+@media (max-width: 640px) {
+  .credits-panel {
+    padding: 30px 16px 22px;
+  }
+
+  .credit-badge {
+    position: static;
+    display: inline-block;
+    margin-top: 12px;
+  }
+
+  .credit-card-future {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .credit-card-future .credit-avatar {
+    margin: 0 auto 10px;
+  }
+
+  .credit-card-future p {
+    grid-column: 1;
+  }
+}
